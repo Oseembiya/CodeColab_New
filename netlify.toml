@@ -1,0 +1,50 @@
+# SPA redirect for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Proxy for API requests
+[[redirects]]
+  from = "/api/*"
+  to = "https://codecolab-852p.onrender.com/api/:splat"
+  status = 200
+  force = true
+  headers = { X-Proxied-By = "Netlify" }
+
+# Direct proxy for Judge0 API requests to RapidAPI
+[[redirects]]
+  from = "/judge0-proxy/*"
+  to = "https://judge0-ce.p.rapidapi.com/:splat"
+  status = 200
+  force = true
+  [redirects.headers]
+    X-Proxied-By = "Netlify"
+    X-RapidAPI-Host = "judge0-ce.p.rapidapi.com"
+    X-RapidAPI-Key = "364315ccbdmshfca9834d3b458b0p1688e8jsn5a98fc87204d"
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "X-RapidAPI-Host, X-RapidAPI-Key, Content-Type"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+
+# Proxy for Socket.IO
+[[redirects]]
+  from = "/socket.io/*"
+  to = "https://codecolab-852p.onrender.com/socket.io/:splat"
+  status = 200
+  force = true
+  headers = { X-Proxied-By = "Netlify" }
+
+# Proxy for PeerJS
+[[redirects]]
+  from = "/peerjs/*"
+  to = "https://codecolab-852p.onrender.com/peerjs/:splat"
+  status = 200
+  force = true
+  headers = { X-Proxied-By = "Netlify" }
+
+# Support WebSocket connections for PeerJS
+[[redirects]]
+  from = "/peerjs/*"
+  to = "wss://codecolab-852p.onrender.com/peerjs/:splat"
+  status = 101
+  force = true 

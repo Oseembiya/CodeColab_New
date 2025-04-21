@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+**/node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+.nyc_output
+
+# Build / Production
+/frontend/build
+/frontend/dist
+/build
+/dist
+*.local
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.example
+.env.development.local
+.env.test.local
+.env.production.local
+**/frontend/.env.development
+**/frontend/.env.production
+**/frontend/.env.example
+
+**/backend/.env.development
+**/backend/.env.production
+**/backend/.env.example
+
+# Firebase
+firebase-admin-key.json
+*-service-account.json
+.firebase/
+.firebaserc
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Misc
+.cache
+.temp
+temp/
+tmp/

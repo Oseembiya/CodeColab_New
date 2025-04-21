@@ -1,0 +1,19 @@
+Now you have a true standalone mode for both the code editor and whiteboard that doesn't depend on any backend calls. Here's how it works:
+Standalone Mode:
+Simply navigate to /session/new or /whiteboard/new
+These pages work completely independently with no backend calls
+Changes are not saved and not shared with others
+Perfect for quick, private coding or drawing
+Collaborative Mode:
+Create a session first (requires login)
+You can make sessions public (visible to all users) or private (only accessible with the ID)
+Other users can join and collaborate in real-time
+Changes are synchronized across all participants
+Public vs. Private Sessions:
+Public sessions are listed in the LiveSessions page for anyone to see and join
+Private sessions require knowing the session ID and manually entering it
+This implementation aligns perfectly with your requirements:
+Standalone mode for quick private use without any session creation
+Collaborative mode when you need to work with others
+Public vs. private session options
+The code is now much simpler too, focusing on true standalone functionality without trying to reconcile with the backend when in standalone mode.

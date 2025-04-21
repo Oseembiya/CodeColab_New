@@ -1,0 +1,631 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--background-color);
+  padding: var(--spacing-md);
+  position: relative;
+}
+
+/* Remove background animation elements */
+.auth-page::before,
+.auth-page::after {
+  display: none;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: var(--spacing-md);
+  z-index: 1;
+  padding: var(--spacing-lg) 0;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.auth-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: #ffffff;
+  letter-spacing: 1px;
+  animation: fadeInUp 0.8s ease-out;
+  /* Remove gradient text */
+  background: none;
+  -webkit-text-fill-color: initial;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+}
+
+.auth-header .tagline {
+  font-size: 1rem;
+  color: var(--text-color-secondary);
+  opacity: 0.8;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 350px;
+  background: var(--background-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  animation: fadeIn 0.8s ease, slideUp 0.8s ease;
+}
+
+.auth-tabs {
+  display: flex;
+  width: 100%;
+  background: #2c2f3380;
+  padding: 2px;
+}
+
+.tab-button {
+  flex: 1;
+  padding: var(--spacing-sm) 0;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tab-button.active {
+  color: var(--secondary-color);
+}
+
+.tab-button.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    var(--secondary-color),
+    var(--secondary-light)
+  );
+  border-radius: 3px 3px 0 0;
+  animation: slideIn 0.3s ease;
+}
+
+.auth-content {
+  padding: 0;
+}
+
+/* Remove unnecessary container styles from the nested AuthForm */
+.auth-content .login-container,
+.auth-content .signup-container {
+  background: none;
+  padding: 0;
+  box-shadow: none;
+  max-width: none;
+  width: 100%;
+}
+
+.auth-content .signup-form {
+  padding: var(--spacing-md);
+  box-shadow: none;
+  background: none;
+  border-radius: 0;
+}
+
+.auth-content .signup-form h1,
+.auth-content .login-link {
+  display: none; /* Hide redundant elements */
+}
+
+.auth-footer {
+  text-align: center;
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+  opacity: 0.6;
+  margin-top: var(--spacing-md);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-50%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Responsive styles - Enhanced */
+@media (max-width: 768px) {
+  .auth-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .auth-card {
+    max-width: 95%;
+    margin: 0 auto;
+  }
+
+  .social-buttons {
+    width: 100%;
+  }
+
+  .social-button {
+    width: 100%;
+    justify-content: center;
+    padding: var(--spacing-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    padding: var(--spacing-sm);
+  }
+
+  .auth-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .auth-header .tagline {
+    font-size: 0.9rem;
+  }
+
+  .tab-button,
+  .auth-tab {
+    font-size: 0.9rem;
+    padding: var(--spacing-xs) 0;
+  }
+
+  .auth-form {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+  }
+
+  .form-group {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .form-group input {
+    height: 42px; /* Slightly taller for touch targets */
+    font-size: 16px; /* Prevent zoom on focus in iOS */
+  }
+
+  .input-icon,
+  .password-toggle {
+    right: 12px;
+  }
+
+  .login-options {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    align-items: flex-start;
+  }
+
+  .auth-button {
+    height: 42px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 350px) {
+  .auth-header h1 {
+    font-size: 1.3rem;
+  }
+  .auth-tab,
+  .tab-button {
+    padding: var(--spacing-sm) 0;
+  }
+
+  .auth-tab.active::after,
+  .tab-button.active::after {
+    height: 2px;
+  }
+
+  .social-auth {
+    padding: var(--spacing-sm);
+  }
+}
+
+/* Tab buttons - rename from tab-button to auth-tab */
+.auth-tab {
+  flex: 1;
+  padding: var(--spacing-sm) 0;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.auth-tab.active {
+  color: var(--secondary-color);
+}
+
+.auth-tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    var(--secondary-color),
+    var(--secondary-light)
+  );
+  border-radius: 3px 3px 0 0;
+  animation: slideIn 0.3s ease;
+}
+
+/* Welcome banner */
+.welcome-banner {
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.welcome-banner h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-color);
+}
+
+.welcome-banner p {
+  font-size: 1.1rem;
+  color: var(--text-color-secondary);
+  opacity: 0.8;
+}
+
+/* Auth form */
+.auth-form {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Status messages */
+.error-message,
+.success-message {
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.error-message {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-left: 3px solid #dc3545;
+}
+
+.success-message {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  border-left: 3px solid #28a745;
+}
+
+/* Login options */
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.forgot-password {
+  color: var(--secondary-color);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.forgot-password:hover {
+  opacity: 0.8;
+}
+
+/* Auth button */
+.auth-button {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: linear-gradient(
+    to right,
+    var(--secondary-color),
+    var(--secondary-light)
+  );
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.auth-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.auth-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Social authentication */
+.social-auth {
+  padding: var(--spacing-md);
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.social-auth p {
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}
+
+.social-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.social-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.social-button.google {
+  background-color: #ea4335;
+  color: white;
+}
+
+.social-button.github {
+  background-color: #333;
+  color: white;
+}
+
+.social-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Password validation */
+.passwords-match {
+  font-size: 0.85rem;
+  padding: var(--spacing-xs) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.passwords-match.valid {
+  color: #28a745;
+}
+
+.passwords-match.invalid {
+  color: #dc3545;
+}
+
+/* Provider suggestion for errors */
+.provider-suggestion,
+.password-recovery-help {
+  margin-top: var(--spacing-sm);
+  font-size: 0.85rem;
+}
+
+.or-divider {
+  margin: 0 var(--spacing-xs);
+  opacity: 0.7;
+}
+
+/* Add this new style */
+.auth-page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* Add these styles for form groups with password inputs */
+.form-group {
+  position: relative;
+  margin-bottom: var(--spacing-md);
+}
+
+/* Remove the positioning for left icons */
+.form-group label svg {
+  display: none; /* Hide icons in labels */
+}
+
+/* Create a common class for all input icons on the right */
+.input-icon {
+  position: absolute;
+  right: 16px;
+  top: 60%;
+  transform: translateY(-50%);
+  height: 100%;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary-color);
+  z-index: 10;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+/* Style for all form inputs to have right padding for the icons */
+.form-group input {
+  width: 100%;
+  height: 38px; /* Set a consistent height */
+  padding: 0 45px 0 15px; /* Right padding for icon */
+  background-color: var(--background-light);
+  border: 1px solid var(--line-color);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  color: var(--text-color);
+  transition: all 0.2s;
+}
+
+/* Password toggle specific styles */
+.password-toggle {
+  position: absolute;
+  right: 16px;
+  top: 60%;
+  transform: translateY(-50%);
+  height: 100%;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary-color);
+  z-index: 10;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Remove hover effects */
+.password-toggle:hover,
+.input-icon:hover {
+  color: var(--secondary-color); /* Same as default now */
+}
+
+/* Make SVG icons a fixed size */
+.input-icon svg,
+.password-toggle svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  position: relative;
+  top: 2px;
+}
+
+/* Keep all form groups as relative for positioning */
+.form-group {
+  position: relative;
+  margin-bottom: var(--spacing-md);
+}
+
+/* Remove specific padding for password fields since all inputs now have the same right padding */
+.password-field input {
+  padding-left: var(--spacing-md);
+}
+
+.password-toggle:focus {
+  outline: none;
+}
+
+/* Make icons absolutely centered */
+.input-icon,
+.password-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Adjust auth card width for better tablet display */
+@media (min-width: 481px) and (max-width: 1024px) {
+  .auth-card {
+    max-width: 400px;
+  }
+
+  .welcome-banner h1 {
+    font-size: 1.8rem;
+  }
+
+  .welcome-banner p {
+    font-size: 1rem;
+  }
+}
+
+/* Small screen adjustments */
+@media (max-width: 425px) {
+  .login-options {
+    justify-content: flex-start;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .remember-me {
+    margin-bottom: var(--spacing-xs);
+  }
+}
