@@ -7,7 +7,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useUserMetrics } from "../contexts/UserMetricsContext";
 import Editor from "@monaco-editor/react";
 import {
-  FaCode,
   FaPlay,
   FaSave,
   FaCog,
@@ -37,6 +36,8 @@ import {
   FaTrash,
   FaLightbulb,
   FaPuzzlePiece,
+  FaInfoCircle,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import { BsFillBrushFill } from "react-icons/bs";
 import VideoChat from "../components/VideoChat";
@@ -84,14 +85,17 @@ const Session = () => {
   const [previousLineCount, setPreviousLineCount] = useState(0);
 
   // Challenge feature
-  const [challenges, setChallenges] = useState([]);
+  const [showChallengeDetailsModal, setShowChallengeDetailsModal] =
+    useState(false);
+  const [challenges, setAvailableChallenges] = useState([]);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [challengeInput, setChallengeInput] = useState({
     title: "",
     description: "",
-    difficulty: "medium",
+    difficulty: "Easy",
   });
+  const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false);
 
   // Pre-defined coding challenges
   const predefinedChallenges = [
@@ -100,7 +104,7 @@ const Session = () => {
       title: "Reverse a String",
       description:
         "Write a function that reverses a string without using the built-in reverse() method.\n\nExample:\nInput: 'hello'\nOutput: 'olleh'",
-      difficulty: "easy",
+      difficulty: "Easy",
       starterCode: "function reverseString(str) {\n  // Your code here\n  \n}",
     },
     {
@@ -108,7 +112,7 @@ const Session = () => {
       title: "Find the Missing Number",
       description:
         "Given an array containing n distinct numbers taken from 0, 1, 2, ..., n, find the one that is missing from the array.\n\nExample:\nInput: [3,0,1]\nOutput: 2",
-      difficulty: "medium",
+      difficulty: "Medium",
       starterCode:
         "function findMissingNumber(nums) {\n  // Your code here\n  \n}",
     },
@@ -117,7 +121,7 @@ const Session = () => {
       title: "Palindrome Check",
       description:
         "Write a function to check if a given string is a palindrome (reads the same forward and backward), ignoring case and non-alphanumeric characters.\n\nExample:\nInput: 'A man, a plan, a canal: Panama'\nOutput: true",
-      difficulty: "easy",
+      difficulty: "Easy",
       starterCode: "function isPalindrome(str) {\n  // Your code here\n  \n}",
     },
     {
@@ -125,7 +129,7 @@ const Session = () => {
       title: "Maximum Subarray Sum",
       description:
         "Find the contiguous subarray within an array of integers that has the largest sum.\n\nExample:\nInput: [-2,1,-3,4,-1,2,1,-5,4]\nOutput: 6 (subarray [4,-1,2,1])",
-      difficulty: "hard",
+      difficulty: "Hard",
       starterCode: "function maxSubArray(nums) {\n  // Your code here\n  \n}",
     },
     {
@@ -133,7 +137,7 @@ const Session = () => {
       title: "FizzBuzz",
       description:
         "Write a function that outputs an array from 1 to n where:\n- For multiples of 3, add 'Fizz' to the array\n- For multiples of 5, add 'Buzz' to the array\n- For multiples of both 3 and 5, add 'FizzBuzz'\n- Otherwise, add the number\n\nExample:\nInput: 15\nOutput: [1, 2, 'Fizz', 4, 'Buzz', 'Fizz', 7, 8, 'Fizz', 'Buzz', 11, 'Fizz', 13, 14, 'FizzBuzz']",
-      difficulty: "easy",
+      difficulty: "Easy",
       starterCode: "function fizzBuzz(n) {\n  // Your code here\n  \n}",
     },
   ];
@@ -172,7 +176,7 @@ const Session = () => {
 
           // Load challenges list if empty
           if (challenges.length === 0) {
-            setChallenges(predefinedChallenges);
+            setAvailableChallenges(predefinedChallenges);
           }
         } catch (error) {
           console.error("Error loading saved challenge:", error);
@@ -791,7 +795,7 @@ const Session = () => {
   const handleChallengeButtonClick = () => {
     // Set challenges to predefined list if not already set
     if (challenges.length === 0) {
-      setChallenges(predefinedChallenges);
+      setAvailableChallenges(predefinedChallenges);
     }
     setShowChallengeModal(true);
   };
@@ -851,18 +855,34 @@ const Session = () => {
   };
 
   const handleCloseChallenge = () => {
-    setCurrentChallenge(null);
-    // Remove from localStorage when closed
-    localStorage.removeItem(`challenge_${sessionId}`);
-    localStorage.removeItem(`challenge_code_${sessionId}`);
-    sessionStorage.removeItem(`code_loaded_${sessionId}`);
+    setShowConfirmCloseModal(true);
+  };
 
-    // Notify others in collaborative mode
-    if (socket && connected && sessionId !== "new") {
-      socket.emit("challenge-closed", {
-        sessionId,
-      });
-    }
+  const confirmCloseChallenge = () => {
+    if (!socket || !currentChallenge) return;
+
+    socket.emit("close-challenge", { sessionId, challenge: currentChallenge });
+    localStorage.removeItem(`challenge_${sessionId}`);
+    setCurrentChallenge(null);
+    setShowConfirmCloseModal(false);
+    setShowChallengeDetailsModal(false);
+
+    // Add analytics event
+    addUserEvent({
+      type: "challenge_closed",
+      userId: user?.id,
+      sessionId,
+      data: {
+        challengeId: currentChallenge.id,
+        challengeTitle: currentChallenge.title,
+      },
+    });
+
+    toast.success("Challenge closed successfully");
+  };
+
+  const cancelCloseChallenge = () => {
+    setShowConfirmCloseModal(false);
   };
 
   // Listen for challenge events from other participants
@@ -1005,6 +1025,25 @@ const Session = () => {
               >
                 <BsFillBrushFill />
               </button>
+
+              {/* Active challenge display in toolbar */}
+              {currentChallenge && (
+                <button
+                  className="active-challenge-pill"
+                  onClick={() => setShowChallengeDetailsModal(true)}
+                  title="View challenge details"
+                >
+                  <FaLightbulb />
+                  <span className="challenge-pill-title">
+                    {currentChallenge.title}
+                  </span>
+                  <span
+                    className={`difficulty-badge ${currentChallenge.difficulty.toLowerCase()}`}
+                  >
+                    {currentChallenge.difficulty}
+                  </span>
+                </button>
+              )}
             </div>
 
             <div className="toolbar-right">
@@ -1012,9 +1051,10 @@ const Session = () => {
                 <button
                   className="challenge-button"
                   onClick={handleChallengeButtonClick}
-                  title="Create or view coding challenges"
+                  title="Choose a coding challenge"
                 >
-                  <FaPuzzlePiece /> Challenges
+                  <FaPuzzlePiece />{" "}
+                  {currentChallenge ? "Change Challenge" : "Challenges"}
                 </button>
               )}
               <button
@@ -1369,34 +1409,86 @@ const Session = () => {
         </div>
       )}
 
-      {/* Active challenge display */}
-      {currentChallenge && (
-        <div className="active-challenge">
-          <div className="challenge-header">
-            <div className="challenge-title">
-              <FaLightbulb />
-              <h3>{currentChallenge.title}</h3>
-              <span
-                className={`difficulty-badge ${currentChallenge.difficulty}`}
+      {/* Challenge details modal */}
+      {showChallengeDetailsModal && currentChallenge && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowChallengeDetailsModal(false)}
+        >
+          <div
+            className="challenge-details-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="challenge-details-header">
+              <div className="challenge-details-title">
+                <FaLightbulb />
+                <h2>{currentChallenge.title}</h2>
+                <span
+                  className={`difficulty-badge ${currentChallenge.difficulty.toLowerCase()}`}
+                >
+                  {currentChallenge.difficulty}
+                </span>
+              </div>
+              <button
+                className="close-modal-button"
+                onClick={() => setShowChallengeDetailsModal(false)}
+                title="Close details"
               >
-                {currentChallenge.difficulty}
-              </span>
+                <FaTimes />
+              </button>
             </div>
-            <button
-              className="close-challenge"
-              onClick={handleCloseChallenge}
-              title="Close challenge"
-            >
-              <FaTimes />
-            </button>
+            <div className="challenge-details-content">
+              <div className="challenge-description-area">
+                <h3>
+                  <FaInfoCircle /> Challenge Description
+                </h3>
+                <p>{currentChallenge.description}</p>
+              </div>
+
+              <div className="challenge-actions">
+                <button
+                  className="remove-challenge-button"
+                  onClick={handleCloseChallenge}
+                >
+                  Abandon Challenge
+                </button>
+                <button
+                  className="close-details-button"
+                  onClick={() => setShowChallengeDetailsModal(false)}
+                >
+                  Continue Coding
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="challenge-description">
-            <p>{currentChallenge.description}</p>
-          </div>
-          <div className="challenge-footer">
-            <span className="challenge-instruction">
-              Solve this challenge in the editor above
-            </span>
+        </div>
+      )}
+
+      {/* Confirm Close Challenge Modal */}
+      {showConfirmCloseModal && (
+        <div className="modal-overlay" onClick={cancelCloseChallenge}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>
+              <FaExclamationTriangle style={{ color: "#ff5252" }} /> Confirm
+              Action
+            </h2>
+            <p>
+              Are you sure you want to abandon this challenge? Your progress
+              will be lost and all participants will no longer see this
+              challenge.
+            </p>
+            <div className="modal-actions">
+              <button className="cancel-button" onClick={cancelCloseChallenge}>
+                Cancel
+              </button>
+              <button
+                className="submit-button"
+                style={{ backgroundColor: "#ff5252" }}
+                onClick={confirmCloseChallenge}
+              >
+                Yes, Abandon Challenge
+              </button>
+            </div>
           </div>
         </div>
       )}
