@@ -35,6 +35,8 @@ import {
   FaChevronDown,
   FaClipboard,
   FaTrash,
+  FaLightbulb,
+  FaPuzzlePiece,
 } from "react-icons/fa";
 import { BsFillBrushFill } from "react-icons/bs";
 import VideoChat from "../components/VideoChat";
@@ -81,12 +83,105 @@ const Session = () => {
   const [codeChangeTimeout, setCodeChangeTimeout] = useState(null);
   const [previousLineCount, setPreviousLineCount] = useState(0);
 
+  // Challenge feature
+  const [challenges, setChallenges] = useState([]);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [currentChallenge, setCurrentChallenge] = useState(null);
+  const [challengeInput, setChallengeInput] = useState({
+    title: "",
+    description: "",
+    difficulty: "medium",
+  });
+
+  // Pre-defined coding challenges
+  const predefinedChallenges = [
+    {
+      id: "1",
+      title: "Reverse a String",
+      description:
+        "Write a function that reverses a string without using the built-in reverse() method.\n\nExample:\nInput: 'hello'\nOutput: 'olleh'",
+      difficulty: "easy",
+      starterCode: "function reverseString(str) {\n  // Your code here\n  \n}",
+    },
+    {
+      id: "2",
+      title: "Find the Missing Number",
+      description:
+        "Given an array containing n distinct numbers taken from 0, 1, 2, ..., n, find the one that is missing from the array.\n\nExample:\nInput: [3,0,1]\nOutput: 2",
+      difficulty: "medium",
+      starterCode:
+        "function findMissingNumber(nums) {\n  // Your code here\n  \n}",
+    },
+    {
+      id: "3",
+      title: "Palindrome Check",
+      description:
+        "Write a function to check if a given string is a palindrome (reads the same forward and backward), ignoring case and non-alphanumeric characters.\n\nExample:\nInput: 'A man, a plan, a canal: Panama'\nOutput: true",
+      difficulty: "easy",
+      starterCode: "function isPalindrome(str) {\n  // Your code here\n  \n}",
+    },
+    {
+      id: "4",
+      title: "Maximum Subarray Sum",
+      description:
+        "Find the contiguous subarray within an array of integers that has the largest sum.\n\nExample:\nInput: [-2,1,-3,4,-1,2,1,-5,4]\nOutput: 6 (subarray [4,-1,2,1])",
+      difficulty: "hard",
+      starterCode: "function maxSubArray(nums) {\n  // Your code here\n  \n}",
+    },
+    {
+      id: "5",
+      title: "FizzBuzz",
+      description:
+        "Write a function that outputs an array from 1 to n where:\n- For multiples of 3, add 'Fizz' to the array\n- For multiples of 5, add 'Buzz' to the array\n- For multiples of both 3 and 5, add 'FizzBuzz'\n- Otherwise, add the number\n\nExample:\nInput: 15\nOutput: [1, 2, 'Fizz', 4, 'Buzz', 'Fizz', 7, 8, 'Fizz', 'Buzz', 11, 'Fizz', 13, 14, 'FizzBuzz']",
+      difficulty: "easy",
+      starterCode: "function fizzBuzz(n) {\n  // Your code here\n  \n}",
+    },
+  ];
+
   // Set active video session when this component mounts
   useEffect(() => {
     if (sessionId && sessionId !== "new" && sessionId !== activeVideoSession) {
       setActiveVideoSession(sessionId);
     }
   }, [sessionId, activeVideoSession, setActiveVideoSession]);
+
+  // Load challenge from localStorage on mount - load FIRST, before other initialization
+  useEffect(() => {
+    if (sessionId) {
+      // Check if we have a saved challenge for this session
+      const savedChallenge = localStorage.getItem(`challenge_${sessionId}`);
+      if (savedChallenge) {
+        try {
+          const parsedChallenge = JSON.parse(savedChallenge);
+          setCurrentChallenge(parsedChallenge);
+
+          // Also load the saved code if available
+          const savedCode = localStorage.getItem(`challenge_code_${sessionId}`);
+          if (savedCode) {
+            console.log("Loading saved challenge code from localStorage");
+            setCode(savedCode);
+            // Set a flag to prevent other initialization from overwriting this code
+            sessionStorage.setItem(`code_loaded_${sessionId}`, "true");
+          } else if (parsedChallenge.starterCode) {
+            // Fallback to starter code if no saved code exists
+            console.log("Loading challenge starter code");
+            setCode(parsedChallenge.starterCode);
+            // Set a flag to prevent other initialization from overwriting this code
+            sessionStorage.setItem(`code_loaded_${sessionId}`, "true");
+          }
+
+          // Load challenges list if empty
+          if (challenges.length === 0) {
+            setChallenges(predefinedChallenges);
+          }
+        } catch (error) {
+          console.error("Error loading saved challenge:", error);
+          localStorage.removeItem(`challenge_${sessionId}`);
+          localStorage.removeItem(`challenge_code_${sessionId}`);
+        }
+      }
+    }
+  }, [sessionId]);
 
   // Initialize session
   useEffect(() => {
@@ -104,11 +199,17 @@ const Session = () => {
       // Mark as initialized for this session
       sessionInitializedRef.current = true;
 
+      // Check if we already loaded code from localStorage challenge
+      const alreadyLoadedCode =
+        sessionStorage.getItem(`code_loaded_${sessionId}`) === "true";
+
       if (sessionId === "new") {
         // Standalone mode - NO session joining or creation
-        // Just initialize the local editor with default values
-        setCode("// Start coding here\n\n");
-        setLanguage("javascript");
+        // Only set default code if not already loaded from challenge
+        if (!alreadyLoadedCode) {
+          setCode("// Start coding here\n\n");
+          setLanguage("javascript");
+        }
 
         // Set participants to just the current user for UI purposes
         setParticipants([
@@ -124,8 +225,13 @@ const Session = () => {
         // Collaborative mode
         try {
           const sessionData = await joinSession(sessionId);
-          if (sessionData) {
+          // Only set code from session if we don't have a challenge code loaded
+          if (sessionData && !alreadyLoadedCode) {
+            console.log("Setting code from session data");
             setCode(sessionData.code || "// Start coding here\n\n");
+            setLanguage(sessionData.language || "javascript");
+          } else if (sessionData) {
+            // Still set language even when using challenge code
             setLanguage(sessionData.language || "javascript");
           }
 
@@ -146,9 +252,27 @@ const Session = () => {
 
             socket.emit("join-session", sessionId);
 
+            // Only listen for code updates if we don't have a challenge active
+            // or in special cases where we need to respect remote changes
             socket.on("code-update", (data) => {
               if (data.sessionId === sessionId) {
-                setCode(data.content);
+                // Only update the code if we're not in the middle of a challenge
+                // or if the change is from a challenge-selected event
+                const canUpdateCode =
+                  !currentChallenge ||
+                  (data.fromChallenge &&
+                    data.challengeId === currentChallenge.id);
+
+                if (canUpdateCode) {
+                  setCode(data.content);
+                  // If this is challenge code, also save it to localStorage
+                  if (data.fromChallenge && currentChallenge) {
+                    localStorage.setItem(
+                      `challenge_code_${sessionId}`,
+                      data.content
+                    );
+                  }
+                }
               }
             });
 
@@ -262,7 +386,7 @@ const Session = () => {
 
       // Only call leaveSession if in collaborative mode
       if (sessionId && sessionId !== "new" && currentSession) {
-        leaveSession();
+        leaveSession(false);
       }
     };
   }, [
@@ -291,7 +415,8 @@ const Session = () => {
     }
 
     isUnmountingRef.current = true;
-    leaveSession();
+    // Pass false to keep challenges in localStorage when exiting collaboration
+    leaveSession(false);
     navigate("/session/new");
   };
 
@@ -306,6 +431,11 @@ const Session = () => {
 
     // Count lines for metrics
     const currentLineCount = value.split("\n").length;
+
+    // If there's an active challenge, update the saved code
+    if (currentChallenge) {
+      localStorage.setItem(`challenge_code_${sessionId}`, value);
+    }
 
     // Only send updates in collaborative mode
     if (socket && connected && sessionId !== "new") {
@@ -657,6 +787,126 @@ const Session = () => {
     };
   }, [sessionId, currentUser, incrementMetrics]);
 
+  // Challenge feature functions
+  const handleChallengeButtonClick = () => {
+    // Set challenges to predefined list if not already set
+    if (challenges.length === 0) {
+      setChallenges(predefinedChallenges);
+    }
+    setShowChallengeModal(true);
+  };
+
+  const handleChallengeInputChange = (e) => {
+    const { name, value } = e.target;
+    setChallengeInput({
+      ...challengeInput,
+      [name]: value,
+    });
+  };
+
+  const handleSelectChallenge = () => {
+    if (!currentChallenge) return;
+
+    // Close modal
+    setShowChallengeModal(false);
+
+    // Insert the starter code into the editor if available
+    if (currentChallenge.starterCode && editorRef.current) {
+      // Save current code first in case user wants to go back
+      const savedCode = code;
+
+      // Insert the challenge code template
+      setCode(currentChallenge.starterCode);
+
+      // Save both challenge and code to localStorage with session ID
+      localStorage.setItem(
+        `challenge_${sessionId}`,
+        JSON.stringify(currentChallenge)
+      );
+      localStorage.setItem(
+        `challenge_code_${sessionId}`,
+        currentChallenge.starterCode
+      );
+
+      // Set the session storage flag to prevent other init code from overwriting
+      sessionStorage.setItem(`code_loaded_${sessionId}`, "true");
+
+      // If in collaborative mode, share with others
+      if (socket && connected && sessionId !== "new") {
+        // Send code update with challenge metadata
+        socket.emit("code-change", {
+          sessionId,
+          content: currentChallenge.starterCode,
+          fromChallenge: true,
+          challengeId: currentChallenge.id,
+        });
+
+        // Also notify others about the challenge
+        socket.emit("challenge-selected", {
+          sessionId,
+          challenge: currentChallenge,
+        });
+      }
+    }
+  };
+
+  const handleCloseChallenge = () => {
+    setCurrentChallenge(null);
+    // Remove from localStorage when closed
+    localStorage.removeItem(`challenge_${sessionId}`);
+    localStorage.removeItem(`challenge_code_${sessionId}`);
+    sessionStorage.removeItem(`code_loaded_${sessionId}`);
+
+    // Notify others in collaborative mode
+    if (socket && connected && sessionId !== "new") {
+      socket.emit("challenge-closed", {
+        sessionId,
+      });
+    }
+  };
+
+  // Listen for challenge events from other participants
+  useEffect(() => {
+    if (socket && sessionId !== "new") {
+      // Listen for selected challenges
+      socket.on("challenge-selected", (data) => {
+        if (data.sessionId === sessionId) {
+          setCurrentChallenge(data.challenge);
+
+          // If there's starter code, update the editor
+          if (data.challenge.starterCode) {
+            setCode(data.challenge.starterCode);
+
+            // Save both challenge and code to localStorage
+            localStorage.setItem(
+              `challenge_${sessionId}`,
+              JSON.stringify(data.challenge)
+            );
+            localStorage.setItem(
+              `challenge_code_${sessionId}`,
+              data.challenge.starterCode
+            );
+          }
+        }
+      });
+
+      // Listen for challenge closed
+      socket.on("challenge-closed", (data) => {
+        if (data.sessionId === sessionId) {
+          setCurrentChallenge(null);
+          localStorage.removeItem(`challenge_${sessionId}`);
+          localStorage.removeItem(`challenge_code_${sessionId}`);
+          sessionStorage.removeItem(`code_loaded_${sessionId}`);
+        }
+      });
+
+      return () => {
+        socket.off("challenge-selected");
+        socket.off("challenge-closed");
+      };
+    }
+  }, [socket, sessionId]);
+
   return (
     <div className="session-container">
       {/* Session Header */}
@@ -758,6 +1008,15 @@ const Session = () => {
             </div>
 
             <div className="toolbar-right">
+              {sessionId !== "new" && (
+                <button
+                  className="challenge-button"
+                  onClick={handleChallengeButtonClick}
+                  title="Create or view coding challenges"
+                >
+                  <FaPuzzlePiece /> Challenges
+                </button>
+              )}
               <button
                 className="run-button"
                 onClick={handleRunCode}
@@ -1047,6 +1306,97 @@ const Session = () => {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Challenge modal */}
+      {showChallengeModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowChallengeModal(false)}
+        >
+          <div className="challenge-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>
+              <FaPuzzlePiece /> Select Coding Challenge
+            </h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSelectChallenge();
+              }}
+            >
+              <div className="modal-input-group">
+                <label htmlFor="challenge-select">Select Challenge</label>
+                <select
+                  id="challenge-select"
+                  value={currentChallenge?.id}
+                  onChange={(e) => {
+                    const selectedChallenge = challenges.find(
+                      (c) => c.id === e.target.value
+                    );
+                    if (selectedChallenge) {
+                      setCurrentChallenge(selectedChallenge);
+                    }
+                  }}
+                >
+                  <option value="">Select a challenge</option>
+                  {challenges.map((challenge) => (
+                    <option key={challenge.id} value={challenge.id}>
+                      {challenge.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => setShowChallengeModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="submit-button"
+                  disabled={!currentChallenge}
+                >
+                  Select Challenge
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Active challenge display */}
+      {currentChallenge && (
+        <div className="active-challenge">
+          <div className="challenge-header">
+            <div className="challenge-title">
+              <FaLightbulb />
+              <h3>{currentChallenge.title}</h3>
+              <span
+                className={`difficulty-badge ${currentChallenge.difficulty}`}
+              >
+                {currentChallenge.difficulty}
+              </span>
+            </div>
+            <button
+              className="close-challenge"
+              onClick={handleCloseChallenge}
+              title="Close challenge"
+            >
+              <FaTimes />
+            </button>
+          </div>
+          <div className="challenge-description">
+            <p>{currentChallenge.description}</p>
+          </div>
+          <div className="challenge-footer">
+            <span className="challenge-instruction">
+              Solve this challenge in the editor above
+            </span>
           </div>
         </div>
       )}

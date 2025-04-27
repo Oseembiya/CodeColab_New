@@ -512,6 +512,13 @@ const setupSocketHandlers = (io) => {
           : null,
       };
 
+      // If this is a challenge code update, preserve that metadata
+      if (data.fromChallenge) {
+        console.log(
+          `Relaying challenge code update for challenge ${data.challengeId}`
+        );
+      }
+
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("code-update", enrichedData);
 
@@ -569,6 +576,47 @@ const setupSocketHandlers = (io) => {
 
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("whiteboard-clear", enrichedData);
+    });
+
+    // Handle challenge selection
+    socket.on("challenge-selected", (data) => {
+      if (!currentSessionId) {
+        socket.emit("error", { message: "You must join a session first" });
+        return;
+      }
+
+      console.log(
+        `Received challenge-selected from user ${currentUser?.uid} in session ${currentSessionId}`
+      );
+
+      // Add user information to the data if not already present
+      const enrichedData = {
+        ...data,
+        user: currentUser
+          ? {
+              id: currentUser.uid,
+              name: currentUser.displayName || currentUser.email,
+            }
+          : null,
+      };
+
+      // Broadcast to everyone in the session except the sender
+      socket.to(currentSessionId).emit("challenge-selected", enrichedData);
+    });
+
+    // Handle challenge closed
+    socket.on("challenge-closed", (data) => {
+      if (!currentSessionId) {
+        socket.emit("error", { message: "You must join a session first" });
+        return;
+      }
+
+      console.log(
+        `Received challenge-closed from user ${currentUser?.uid} in session ${currentSessionId}`
+      );
+
+      // Broadcast to everyone in the session except the sender
+      socket.to(currentSessionId).emit("challenge-closed", data);
     });
 
     // Handle whiteboard updates

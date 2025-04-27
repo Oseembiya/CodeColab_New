@@ -225,10 +225,22 @@ export const SessionProvider = ({ children }) => {
   };
 
   // Leave the current session
-  const leaveSession = async () => {
+  const leaveSession = async (clearChallenges = true) => {
     // Only update state if there is a current session to leave
     if (currentSession) {
+      const sessionId = currentSession.id;
       setCurrentSession(null);
+
+      // Optionally clear challenges from localStorage
+      if (clearChallenges) {
+        try {
+          // Remove any stored challenges for this session
+          localStorage.removeItem(`challenge_${sessionId}`);
+          localStorage.removeItem(`challenge_code_${sessionId}`);
+        } catch (error) {
+          console.error("Error clearing challenge data:", error);
+        }
+      }
     }
   };
 
