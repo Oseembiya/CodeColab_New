@@ -5,6 +5,7 @@ import { SocketProvider } from "./contexts/SocketContext";
 import { UserMetricsProvider } from "./contexts/UserMetricsContext";
 import { VideoProvider } from "./contexts/VideoContext";
 import { useAuth } from "./contexts/AuthContext";
+import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
 import Dashboard from "./pages/dashboard";
 import Auth from "./pages/auth";
@@ -62,6 +63,9 @@ function App() {
         !currentUser ? "auth-only" : ""
       }`}
     >
+      {/* Toast notifications */}
+      <Toaster position="top-right" />
+      
       <SocketProvider>
         <UserMetricsProvider>
           <SessionProvider>
