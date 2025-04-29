@@ -1,16 +1,34 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useSocket } from "../contexts/SocketContext";
 import {
   FaCrown,
   FaMicrophone,
   FaMicrophoneSlash,
   FaVideo,
   FaVideoSlash,
+  FaSync,
 } from "react-icons/fa";
 import "../styles/components/ParticipantsList.css";
 
 const ParticipantsList = ({ participants = [], currentUserId }) => {
   const { currentUser } = useAuth();
+  const { socket, connected, requestUsersList } = useSocket();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Get session ID from URL if in a session
+  const getSessionId = () => {
+    const path = window.location.pathname;
+    const isSession =
+      path.includes("/session/") || path.includes("/whiteboard/");
+    if (!isSession) return null;
+
+    const parts = path.split("/");
+    if (parts.length >= 3) {
+      return parts[2];
+    }
+    return null;
+  };
 
   // Ensure at least current user is added when participants list is empty
   const effectiveParticipants = React.useMemo(() => {
@@ -34,11 +52,52 @@ const ParticipantsList = ({ participants = [], currentUserId }) => {
     return [];
   }, [participants, currentUser, currentUserId]);
 
+  // Periodically request updated participants list to ensure synchronization
+  useEffect(() => {
+    const sessionId = getSessionId();
+    if (!sessionId || sessionId === "new") return;
+
+    // Request users list initially
+    if (socket && connected) {
+      requestUsersList(sessionId);
+    }
+
+    // Set up periodic refresh every 10 seconds
+    const interval = setInterval(() => {
+      if (socket && connected) {
+        requestUsersList(sessionId);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [socket, connected, requestUsersList]);
+
+  // Handle manual refresh of participant list
+  const handleRefreshParticipants = () => {
+    const sessionId = getSessionId();
+    if (!sessionId || sessionId === "new") return;
+
+    if (socket && connected) {
+      setRefreshing(true);
+      requestUsersList(sessionId);
+      setTimeout(() => setRefreshing(false), 1000);
+    }
+  };
+
   // If no participants even after adding defaults, show placeholder
   if (!effectiveParticipants || effectiveParticipants.length === 0) {
     return (
       <div className="participants-list">
-        <h3>Participants</h3>
+        <div className="participants-header">
+          <h3>Participants</h3>
+          <button
+            className={`refresh-button ${refreshing ? "refreshing" : ""}`}
+            onClick={handleRefreshParticipants}
+            title="Refresh participants list"
+          >
+            <FaSync />
+          </button>
+        </div>
         <div className="no-participants">
           <p>Connecting...</p>
         </div>
@@ -52,13 +111,26 @@ const ParticipantsList = ({ participants = [], currentUserId }) => {
     if (a.isHost && !b.isHost) return -1;
     if (!a.isHost && b.isHost) return 1;
 
+    // Current user comes next
+    if (a.id === currentUserId && b.id !== currentUserId) return -1;
+    if (a.id !== currentUserId && b.id === currentUserId) return 1;
+
     // Then sort alphabetically by name
     return a.name?.localeCompare(b.name || "");
   });
 
   return (
     <div className="participants-list">
-      <h3>Participants ({effectiveParticipants.length})</h3>
+      <div className="participants-header">
+        <h3>Participants ({effectiveParticipants.length})</h3>
+        <button
+          className={`refresh-button ${refreshing ? "refreshing" : ""}`}
+          onClick={handleRefreshParticipants}
+          title="Refresh participants list"
+        >
+          <FaSync />
+        </button>
+      </div>
       <ul>
         {sortedParticipants.map((participant) => (
           <li

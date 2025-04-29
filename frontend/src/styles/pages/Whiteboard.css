@@ -230,8 +230,9 @@
 /* Canvas Container */
 .canvas-container {
   flex: 1;
-  overflow: hidden;
+  width: 100%;
   position: relative;
+  overflow: hidden;
 }
 
 .canvas-container canvas {

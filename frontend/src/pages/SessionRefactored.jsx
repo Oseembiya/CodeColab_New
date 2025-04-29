@@ -25,7 +25,13 @@ const SessionRefactored = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { currentSession, joinSession, leaveSession } = useSession();
+  const {
+    currentSession,
+    joinSession,
+    leaveSession,
+    updateSessionCode,
+    getSessionCode,
+  } = useSession();
   const { socket, connected, authenticate } = useSocket();
   const { incrementMetrics } = useUserMetrics();
 
@@ -153,11 +159,21 @@ const SessionRefactored = () => {
         // Collaborative mode
         try {
           const sessionData = await joinSession(sessionId);
+
+          // Check for code in SessionContext first
+          const existingCode = getSessionCode(sessionId);
+
           // Only set code from session if we don't have a challenge code loaded
-          if (sessionData && !alreadyLoadedCode) {
+          // and there's no existing code in the context
+          if (sessionData && !alreadyLoadedCode && !existingCode.code) {
             console.log("Setting code from session data");
             setCode(sessionData.code || "// Start coding here\n\n");
             setLanguage(sessionData.language || "javascript");
+          } else if (existingCode.code && !alreadyLoadedCode) {
+            // Use code from context (preserved from previous switch)
+            console.log("Setting code from session context");
+            setCode(existingCode.code);
+            setLanguage(existingCode.language || "javascript");
           } else if (sessionData) {
             // Still set language even when using challenge code
             setLanguage(sessionData.language || "javascript");
@@ -193,6 +209,9 @@ const SessionRefactored = () => {
 
                 if (canUpdateCode) {
                   setCode(data.content);
+                  // Also update code in session context
+                  updateSessionCode(sessionId, data.content, language);
+
                   // If this is challenge code, also save it to localStorage
                   if (data.fromChallenge && currentChallenge) {
                     localStorage.setItem(
@@ -301,21 +320,18 @@ const SessionRefactored = () => {
       clearTimeout(participantsTimer);
 
       if (socket && connected && sessionId && sessionId !== "new") {
-        // Notify server that user is leaving the session
-        socket.emit("leave-session", {
-          sessionId,
-          userId: currentUser?.uid,
-        });
-
-        // Clean up listeners
+        // Don't leave the session when switching between session and whiteboard
+        // This was causing participants to be lost when switching views
+        // Only clean up socket listeners related to this component
         socket.off("code-update");
         socket.off("users-update");
       }
 
-      // Only call leaveSession if in collaborative mode
-      if (sessionId && sessionId !== "new" && currentSession) {
-        leaveSession(false);
-      }
+      // Don't call leaveSession when just switching views
+      // Only call leaveSession if in collaborative mode and truly exiting
+      // if (sessionId && sessionId !== "new" && currentSession) {
+      //   leaveSession(false);
+      // }
     };
   }, [
     sessionId,
@@ -329,6 +345,8 @@ const SessionRefactored = () => {
     participants,
     currentChallenge,
     connected,
+    updateSessionCode,
+    getSessionCode,
   ]);
 
   // Exit collaboration mode and switch to standalone mode
@@ -368,6 +386,11 @@ const SessionRefactored = () => {
       localStorage.setItem(`challenge_code_${sessionId}`, value);
     }
 
+    // Store code in session context to persist between view switches
+    if (sessionId && sessionId !== "new") {
+      updateSessionCode(sessionId, value, language);
+    }
+
     // Only send updates in collaborative mode
     if (socket && connected && sessionId !== "new") {
       socket.emit("code-change", {
@@ -398,6 +421,11 @@ const SessionRefactored = () => {
   const handleLanguageChange = (e) => {
     const newLanguage = e.target.value;
     setLanguage(newLanguage);
+
+    // Update language in session context
+    if (sessionId && sessionId !== "new") {
+      updateSessionCode(sessionId, code, newLanguage);
+    }
 
     // Only notify others in collaborative mode
     if (socket && connected && sessionId !== "new") {

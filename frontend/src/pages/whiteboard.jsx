@@ -23,7 +23,8 @@ const Whiteboard = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { joinSession, leaveSession, currentSession } = useSession();
+  const { joinSession, leaveSession, currentSession, getSessionCode } =
+    useSession();
   const { socket, connected, authenticate, authenticatedRef } = useSocket();
 
   const canvasRef = useRef(null);
@@ -35,7 +36,6 @@ const Whiteboard = () => {
   const [activeColor, setActiveColor] = useState("#5c5fbb");
   const [brushWidth, setBrushWidth] = useState(3);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [participants, setParticipants] = useState([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Colors palette
@@ -143,6 +143,7 @@ const Whiteboard = () => {
       sessionInitializedRef.current = true; // Mark as initialized
 
       try {
+        // This will join the same session - any existing code will be preserved in the session context
         await joinSession(sessionId);
 
         if (socket && isMounted) {
@@ -240,7 +241,6 @@ const Whiteboard = () => {
             "Whiteboard: Received users update, count:",
             users.length
           );
-          setParticipants(users);
         }
       };
 
@@ -291,11 +291,8 @@ const Whiteboard = () => {
       // Clean up socket listeners
       if (cleanupListeners) cleanupListeners();
 
-      // If we're actually leaving the session (not just remounting), leave the session
-      if (sessionId && sessionId !== "new" && socket && connected) {
-        console.log("Emitting leave-session on unmount for session", sessionId);
-        socket.emit("leave-session", sessionId);
-      }
+      // Don't leave the session when switching between session and whiteboard
+      // Only needed for truly disconnecting, which is handled in handleExitCollaboration
     };
   }, [
     sessionId,
@@ -306,6 +303,7 @@ const Whiteboard = () => {
     authenticate,
     navigate,
     authenticatedRef,
+    currentSession,
   ]);
 
   // Exit collaboration mode and switch to standalone mode

@@ -30,9 +30,37 @@ export const SessionProvider = ({ children }) => {
   const [currentSession, setCurrentSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [publicSessionsLoading, setPublicSessionsLoading] = useState(true);
+  // Add session code state to store code content between view switches
+  const [sessionCodeState, setSessionCodeState] = useState({});
   const { currentUser } = useAuth();
   const metrics = useUserMetrics();
   const { socket } = useSocket();
+
+  // Update session code in state when it changes
+  const updateSessionCode = (sessionId, code, language = "javascript") => {
+    if (!sessionId || sessionId === "new") return;
+
+    setSessionCodeState((prevState) => ({
+      ...prevState,
+      [sessionId]: {
+        code,
+        language,
+        lastUpdated: new Date(),
+      },
+    }));
+  };
+
+  // Get current code for a session
+  const getSessionCode = (sessionId) => {
+    if (!sessionId || !sessionCodeState[sessionId]) {
+      return {
+        code: "// Start coding here\n\n",
+        language: "javascript",
+      };
+    }
+
+    return sessionCodeState[sessionId];
+  };
 
   // Fetch user's sessions
   useEffect(() => {
@@ -302,6 +330,10 @@ export const SessionProvider = ({ children }) => {
     refreshSessions,
     refreshAllSessions,
     isStandaloneMode,
+    // Add the new code state functions
+    updateSessionCode,
+    getSessionCode,
+    sessionCodeState,
   };
 
   return (
