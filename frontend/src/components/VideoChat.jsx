@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useSocket } from "../contexts/SocketContext";
 import { useVideo } from "../contexts/VideoContext";
@@ -35,6 +35,11 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+  const [initializing, setInitializing] = useState(false);
+  const [error, setError] = useState(null);
+  const [reconnecting, setReconnecting] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Refs
   const myVideoRef = useRef(null);
@@ -46,6 +51,10 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
   const lastPeerIdRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const alreadyJoinedRef = useRef(false);
+  const initializationTimeoutRef = useRef(null);
+  const lastInitAttemptRef = useRef(0);
+  const effectCleanupRef = useRef(false);
+  const reconnectTimeoutRef = useRef(null);
 
   // Create participant list from participants prop and peer connections
   const effectiveParticipants = React.useMemo(() => {
@@ -839,11 +848,527 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
   // Get peer connection count
   const peerCount = Object.keys(peersData).length;
 
+  // Initialize media stream (microphone)
+  const initializeMedia = useCallback(async () => {
+    if (!currentUser || !sessionId) return null;
+
+    setInitializing(true);
+
+    try {
+      console.log("Initializing media stream");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+
+      console.log("Media stream initialized successfully");
+      setMyStream(stream);
+      setError(null);
+      setInitializing(false);
+      return stream;
+    } catch (err) {
+      console.error("Error initializing media:", err);
+      setError(`Could not access microphone: ${err.message}`);
+      setInitializing(false);
+
+      // Retry logic (max 3 attempts)
+      if (retryCount < 3) {
+        console.log(`Retrying media initialization (${retryCount + 1}/3)`);
+        setRetryCount((r) => r + 1);
+
+        // Clear any pending timeout
+        if (initializationTimeoutRef.current) {
+          clearTimeout(initializationTimeoutRef.current);
+        }
+
+        // Retry after delay
+        initializationTimeoutRef.current = setTimeout(() => {
+          initializeMedia();
+        }, 2000);
+      }
+
+      return null;
+    }
+  }, [currentUser, sessionId, retryCount, setMyStream]);
+
+  // Initialize peer connection
+  const initializePeer = useCallback(
+    async (stream) => {
+      if (!currentUser || !sessionId || !stream || effectCleanupRef.current)
+        return null;
+
+      // Destroy existing peer connection if it exists and isn't already destroyed
+      if (peerRef.current && !peerRef.current.destroyed) {
+        console.log(
+          "Destroying previous peer connection before creating new one."
+        );
+        peerRef.current.destroy();
+      }
+      // Clear any pending reconnect timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      setInitializing(true);
+      setReconnecting(false);
+
+      try {
+        console.log(`Creating PeerJS instance with ID: ${currentUser.uid}`);
+        const newPeer = new Peer(currentUser.uid, {
+          host: getHostname(
+            import.meta.env.VITE_API_URL || "http://localhost:3001"
+          ),
+          port: 3001,
+          path: "/peerjs",
+          secure: false,
+          config: {
+            iceServers: [
+              { urls: "stun:stun.l.google.com:19302" },
+              { urls: "stun:stun1.l.google.com:19302" },
+            ],
+          },
+          debug: 1,
+        });
+
+        newPeer.on("open", (id) => {
+          console.log(`PeerJS connection open: ${id}`);
+          if (effectCleanupRef.current) return newPeer.destroy();
+
+          setMyPeerContext(newPeer);
+          setVideoInitialized(true);
+          setInitializing(false);
+          setReconnecting(false);
+
+          if (socket && connected) {
+            console.log(`Notifying server about peer ready: ${id}`);
+            socket.emit("peer-ready", {
+              roomId: sessionId,
+              userId: currentUser.uid,
+              peerId: id,
+            });
+          }
+        });
+
+        newPeer.on("call", (call) => {
+          if (effectCleanupRef.current) return;
+          console.log(`Receiving call from ${call.peer}`);
+
+          call.answer(stream);
+          setPeerConnection(call.peer, call);
+
+          call.on("stream", (remoteStream) => {
+            if (effectCleanupRef.current) return;
+            console.log(`Received stream from ${call.peer}`);
+            handleRemoteStream(call.peer, remoteStream);
+          });
+
+          call.on("close", () => {
+            if (effectCleanupRef.current) return;
+            console.log(`Call with ${call.peer} closed`);
+            removePeer(call.peer);
+            removeAudioElement(call.peer);
+          });
+
+          call.on("error", (err) => {
+            if (effectCleanupRef.current) return;
+            console.error(`Call error with ${call.peer}:`, err);
+            removePeer(call.peer);
+            removeAudioElement(call.peer);
+          });
+        });
+
+        newPeer.on("error", (err) => {
+          if (effectCleanupRef.current) return;
+          console.error("PeerJS error:", err);
+          setError(`Peer connection error: ${err.type}`);
+          setInitializing(false);
+          setReconnecting(false);
+
+          if (
+            err.type === "peer-unavailable" ||
+            err.type === "network" ||
+            err.type === "server-error"
+          ) {
+            console.log("Attempting full re-initialization after peer error.");
+            if (!newPeer.destroyed) newPeer.destroy();
+            setVideoInitialized(false);
+          }
+        });
+
+        newPeer.on("disconnected", () => {
+          if (effectCleanupRef.current || newPeer.destroyed) return;
+          console.log("Peer disconnected from server. Attempting reconnect...");
+          setError("Connection lost. Attempting to reconnect...");
+          setReconnecting(true);
+          setInitializing(false);
+
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+          }
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (
+              !effectCleanupRef.current &&
+              !newPeer.destroyed &&
+              newPeer.disconnected
+            ) {
+              try {
+                console.log("Executing peer.reconnect()");
+                newPeer.reconnect();
+              } catch (reconnectErr) {
+                console.error("Error calling peer.reconnect():", reconnectErr);
+                setError(
+                  "Reconnect failed. Please try closing and reopening the chat."
+                );
+                setReconnecting(false);
+              }
+            } else {
+              console.log(
+                "Skipping reconnect attempt (cleanup initiated, peer destroyed, or already reconnected)."
+              );
+              setReconnecting(false);
+            }
+          }, 3000);
+        });
+
+        newPeer.on("close", () => {
+          if (effectCleanupRef.current) return;
+          console.log("Peer connection closed permanently.");
+          setError("Connection closed.");
+          setVideoInitialized(false);
+          setInitializing(false);
+          setReconnecting(false);
+        });
+
+        return newPeer;
+      } catch (err) {
+        console.error("Fatal error during PeerJS initialization:", err);
+        setError(`Peer setup failed: ${err.message}`);
+        setInitializing(false);
+        setReconnecting(false);
+        return null;
+      }
+    },
+    [
+      currentUser,
+      sessionId,
+      socket,
+      connected,
+      setMyPeerContext,
+      setPeerConnection,
+      removePeer,
+      setVideoInitialized,
+      setIsInitializing,
+      handleRemoteStream,
+      removeAudioElement,
+      peerRef,
+    ]
+  );
+
+  // Connect to a specific peer
+  const connectToPeer = useCallback(
+    (peerId, userId) => {
+      if (
+        !peerRef.current ||
+        peerRef.current.destroyed ||
+        !myStreamRef.current
+      ) {
+        console.log(
+          `Cannot connect to peer ${peerId} (${userId}): local peer or stream not ready.`
+        );
+        return;
+      }
+      if (peerId === peerRef.current.id) {
+        console.log("Skipping call to self.");
+        return;
+      }
+      if (
+        peerConnectionsRef.current[userId] ||
+        peerConnectionsRef.current[peerId]
+      ) {
+        console.log(
+          `Already have a connection with ${userId} / ${peerId}. Skipping call.`
+        );
+        return;
+      }
+
+      try {
+        console.log(`Calling peer ${peerId} (${userId})`);
+        const call = peerRef.current.call(peerId, myStreamRef.current);
+        if (!call) {
+          console.error(`Failed to create call to ${peerId}`);
+          return;
+        }
+
+        setPeerConnection(userId, call);
+
+        call.on("stream", (remoteStream) => {
+          if (effectCleanupRef.current) return;
+          console.log(
+            `Received stream from ${userId} (${peerId}) in outgoing call`
+          );
+          handleRemoteStream(userId, remoteStream);
+        });
+
+        call.on("close", () => {
+          if (effectCleanupRef.current) return;
+          console.log(`Outgoing call with ${userId} (${peerId}) closed`);
+          removePeer(userId);
+          removeAudioElement(userId);
+        });
+
+        call.on("error", (error) => {
+          if (effectCleanupRef.current) return;
+          console.error(
+            `Outgoing call error with ${userId} (${peerId}):`,
+            error
+          );
+          removePeer(userId);
+          removeAudioElement(userId);
+        });
+      } catch (error) {
+        console.error(`Failed to call peer ${peerId}:`, error);
+      }
+    },
+    [
+      peerRef,
+      myStreamRef,
+      setPeerConnection,
+      handleRemoteStream,
+      removePeer,
+      removeAudioElement,
+      peerConnectionsRef,
+    ]
+  );
+
+  // Setup socket listeners for peer events
+  const setupSocketListeners = useCallback(() => {
+    if (!socket || !connected || !sessionId) return null;
+
+    console.log("Setting up socket listeners for peer events");
+
+    const handlePeerReady = ({ roomId, userId, peerId }) => {
+      if (roomId !== sessionId || userId === currentUser?.uid) return;
+
+      console.log(`Peer ${userId} (${peerId}) is ready in room ${roomId}`);
+      connectToPeer(peerId, userId);
+    };
+
+    const handleUserDisconnect = ({ roomId, userId }) => {
+      if (roomId !== sessionId || userId === currentUser?.uid) return;
+
+      console.log(
+        `Server notified: User ${userId} disconnected from room ${roomId}`
+      );
+      removePeer(userId);
+      removeAudioElement(userId);
+    };
+
+    socket.on("peer-ready", handlePeerReady);
+    socket.on("user-disconnect", handleUserDisconnect);
+
+    return () => {
+      console.log("Removing socket listeners for peer events");
+      socket.off("peer-ready", handlePeerReady);
+      socket.off("user-disconnect", handleUserDisconnect);
+    };
+  }, [
+    socket,
+    connected,
+    sessionId,
+    currentUser,
+    connectToPeer,
+    removePeer,
+    removeAudioElement,
+  ]);
+
+  // Main effect for video chat initialization
+  useEffect(() => {
+    if (
+      !sessionId ||
+      !currentUser ||
+      !socket ||
+      !connected ||
+      videoInitialized ||
+      initializing ||
+      reconnecting
+    ) {
+      console.log("Skipping main initialization effect:", {
+        sessionId,
+        currentUser: !!currentUser,
+        socket: !!socket,
+        connected,
+        videoInitialized,
+        initializing,
+        reconnecting,
+      });
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastInitAttemptRef.current < 5000) {
+      console.log("Throttling main initialization attempts");
+      return;
+    }
+    lastInitAttemptRef.current = now;
+
+    console.log("Starting main video chat setup");
+    effectCleanupRef.current = false;
+
+    if (initializationTimeoutRef.current) {
+      clearTimeout(initializationTimeoutRef.current);
+    }
+
+    let mounted = true;
+
+    const initialize = async () => {
+      if (!mounted || effectCleanupRef.current) return;
+
+      setInitializing(true);
+      setError(null);
+
+      try {
+        const stream = await initializeMedia();
+        if (!stream || !mounted || effectCleanupRef.current) {
+          console.log(
+            "Main effect: Media initialization failed or component unmounted."
+          );
+          if (mounted) setInitializing(false);
+          return;
+        }
+
+        await initializePeer(stream);
+      } catch (err) {
+        console.error(
+          "Error during main video chat initialization sequence:",
+          err
+        );
+        if (mounted) {
+          setError("Failed to initialize video chat");
+          setInitializing(false);
+        }
+      }
+    };
+
+    initialize();
+
+    return () => {
+      mounted = false;
+      console.log("Cleaning up main video chat effect");
+      effectCleanupRef.current = true;
+
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+        initializationTimeoutRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      console.log("Main effect cleanup: Not destroying peer instance here.");
+    };
+  }, [
+    sessionId,
+    currentUser,
+    socket,
+    connected,
+    videoInitialized,
+    initializing,
+    reconnecting,
+  ]);
+
+  // Setup socket listeners (runs once peer is initialized)
+  useEffect(() => {
+    if (
+      !sessionId ||
+      !socket ||
+      !connected ||
+      !videoInitialized ||
+      reconnecting
+    )
+      return;
+
+    console.log("Setting up socket listeners effect.");
+    const cleanupListeners = setupSocketListeners();
+
+    return () => {
+      console.log("Cleaning up socket listeners effect.");
+      if (typeof cleanupListeners === "function") {
+        cleanupListeners();
+      }
+    };
+  }, [
+    sessionId,
+    socket,
+    connected,
+    videoInitialized,
+    reconnecting,
+    setupSocketListeners,
+  ]);
+
+  // Cleanup effect for component unmount (distinct from main init effect cleanup)
+  useEffect(() => {
+    return () => {
+      console.log("VideoChat component is unmounting - final cleanup.");
+      effectCleanupRef.current = true;
+
+      Object.keys(audioElementsRef.current).forEach((userId) => {
+        removeAudioElement(userId);
+      });
+      audioElementsRef.current = {};
+
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+
+      console.log(
+        "Component unmount: Relying on VideoContext for peer/stream cleanup."
+      );
+    };
+  }, [removeAudioElement]);
+
+  // Toggle microphone
+  const toggleMicrophone = useCallback(() => {
+    if (!myStreamRef.current) return;
+
+    const audioTracks = myStreamRef.current.getAudioTracks();
+    if (audioTracks.length === 0) return;
+
+    const newState = !audioTracks[0].enabled;
+    setAudioEnabled(newState);
+
+    audioTracks.forEach((track) => {
+      track.enabled = newState;
+    });
+
+    setMuted(!newState);
+  }, [myStreamRef, setMuted]);
+
+  // Handle close button click
+  const handleClose = useCallback(() => {
+    console.log("Close button clicked.");
+    if (onClose) onClose();
+  }, [onClose]);
+
+  // Render logic
+  if (!sessionId) {
+    return null;
+  }
+
+  const displayParticipants = effectiveParticipants.filter(
+    (p) => p.id !== currentUser?.uid
+  );
+
   return (
     <div className="video-chat-container">
       <div className="video-header">
         <h3>Video Chat ({effectiveParticipants.length})</h3>
-        <button className="close-button" onClick={onClose}>
+        <button className="close-button" onClick={handleClose}>
           <FaTimes />
         </button>
       </div>
