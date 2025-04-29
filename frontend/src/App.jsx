@@ -7,7 +7,7 @@ import { VideoProvider } from "./contexts/VideoContext";
 import { useAuth } from "./contexts/AuthContext";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
-import Dashboard from "./pages/dashboard";
+import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/auth";
 import Profile from "./pages/profile";
 import Session from "./pages/session";
@@ -65,7 +65,7 @@ function App() {
     >
       {/* Toast notifications */}
       <Toaster position="top-right" />
-      
+
       <SocketProvider>
         <UserMetricsProvider>
           <SessionProvider>
@@ -85,7 +85,7 @@ function App() {
 
                   {/* Protected routes */}
                   <Route
-                    path="/"
+                    path="/dashboard"
                     element={
                       <ProtectedRoute>
                         <Dashboard />

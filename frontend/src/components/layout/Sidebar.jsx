@@ -78,7 +78,7 @@ const Sidebar = ({ onFoldChange }) => {
   // Determine if the route is active
   const isActive = (path) => {
     if (path === "/") {
-      return location.pathname === path;
+      return location.pathname === "/" || location.pathname === "/dashboard";
     }
 
     // Special handling for whiteboard routes
@@ -121,7 +121,7 @@ const Sidebar = ({ onFoldChange }) => {
         <nav className="sidebar-nav">
           <ul>
             <li className={isActive("/") ? "active" : ""}>
-              <Link to="/" onClick={closeSidebar} title="Dashboard">
+              <Link to="/dashboard" onClick={closeSidebar} title="Dashboard">
                 <FaHome /> {!isFolded && <span>Dashboard</span>}
               </Link>
             </li>
