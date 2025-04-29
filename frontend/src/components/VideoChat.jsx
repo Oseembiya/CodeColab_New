@@ -56,6 +56,16 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
   const effectCleanupRef = useRef(false);
   const reconnectTimeoutRef = useRef(null);
 
+  // Handle remote stream
+  const handleRemoteStream = useCallback(
+    (userId, remoteStream) => {
+      console.log(`Handling remote stream from ${userId}`);
+      setPeerStream(userId, remoteStream);
+      setPeersData((prev) => ({ ...prev, [userId]: { stream: remoteStream } }));
+    },
+    [setPeerStream]
+  );
+
   // Create participant list from participants prop and peer connections
   const effectiveParticipants = React.useMemo(() => {
     // Use provided participants if available
