@@ -26,12 +26,38 @@ export const VideoProvider = ({ children }) => {
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [activeVideoSession, setActiveVideoSession] = useState(null);
   const [videoInitialized, setVideoInitialized] = useState(false);
+  const [videoParticipants, setVideoParticipants] = useState([]);
 
   // Use refs to maintain state across re-renders
   const myStreamRef = useRef(null);
   const peerRef = useRef(null);
   const peerConnectionsRef = useRef({});
   const peerStreamsRef = useRef({});
+
+  // Listen for user updates to track video participants
+  useEffect(() => {
+    if (!socket || !connected || !activeVideoSession) return;
+
+    const handleUsersUpdate = (users) => {
+      if (!Array.isArray(users)) return;
+
+      // Filter users who have video enabled
+      const videoUsers = users.filter((user) => user.hasVideo === true);
+      console.log("Received users update with video users:", videoUsers.length);
+
+      // Update video participants
+      setVideoParticipants(videoUsers);
+    };
+
+    socket.on("users-update", handleUsersUpdate);
+
+    // Request users when first connecting
+    socket.emit("get-users", { sessionId: activeVideoSession });
+
+    return () => {
+      socket.off("users-update", handleUsersUpdate);
+    };
+  }, [socket, connected, activeVideoSession]);
 
   // Open video chat for a specific session
   const openVideoChat = (sessionId) => {
@@ -71,11 +97,17 @@ export const VideoProvider = ({ children }) => {
 
   // Store peer connection (PeerJS Call object)
   const setPeerConnection = (userId, call) => {
+    console.log(`VideoContext: Storing peer connection for ${userId}`);
     peerConnectionsRef.current[userId] = call;
   };
 
   // Store peer stream (MediaStream)
   const setPeerStream = (userId, stream) => {
+    console.log(
+      `VideoContext: Storing peer stream for ${userId} with ${
+        stream.getTracks().length
+      } tracks`
+    );
     peerStreamsRef.current[userId] = stream;
   };
 
@@ -84,6 +116,7 @@ export const VideoProvider = ({ children }) => {
     // Close connection if exists
     if (peerConnectionsRef.current[userId]) {
       try {
+        console.log(`VideoContext: Closing connection for peer ${userId}`);
         peerConnectionsRef.current[userId].close();
       } catch (e) {
         console.error("Error closing peer connection:", e);
@@ -93,6 +126,7 @@ export const VideoProvider = ({ children }) => {
 
     // Delete stream ref
     if (peerStreamsRef.current[userId]) {
+      console.log(`VideoContext: Removing stream for peer ${userId}`);
       delete peerStreamsRef.current[userId];
     }
 
@@ -105,19 +139,33 @@ export const VideoProvider = ({ children }) => {
 
     // Stop my stream
     if (myStreamRef.current) {
-      myStreamRef.current.getTracks().forEach((track) => track.stop());
+      myStreamRef.current.getTracks().forEach((track) => {
+        console.log(`Stopping ${track.kind} track: ${track.label}`);
+        track.stop();
+      });
       myStreamRef.current = null;
     }
 
     // Destroy peer object
     if (peerRef.current) {
       try {
+        console.log("Destroying PeerJS instance");
         peerRef.current.destroy();
       } catch (e) {
         console.error("Error destroying peer:", e);
       }
       peerRef.current = null;
     }
+
+    // Close all peer connections
+    Object.entries(peerConnectionsRef.current).forEach(([userId, call]) => {
+      try {
+        console.log(`Closing connection with ${userId}`);
+        call.close();
+      } catch (e) {
+        console.error(`Error closing connection with ${userId}:`, e);
+      }
+    });
 
     // Clear connection and stream refs
     peerConnectionsRef.current = {};
@@ -127,6 +175,7 @@ export const VideoProvider = ({ children }) => {
     setVideoInitialized(false);
     setActiveVideoSession(null);
     setIsVideoOpen(false);
+    setVideoParticipants([]);
   };
 
   // Auto-clear state if user logs out
@@ -145,6 +194,7 @@ export const VideoProvider = ({ children }) => {
     setActiveVideoSession,
     openVideoChat,
     closeVideoChat,
+    videoParticipants,
 
     // Stream/Peer State
     myStreamRef,

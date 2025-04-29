@@ -12,22 +12,14 @@ import "../styles/components/ParticipantsList.css";
 const ParticipantsList = ({ participants = [], currentUserId }) => {
   const { currentUser } = useAuth();
 
-  // Debug log when participants change
-  useEffect(() => {
-    console.log("ParticipantsList received participants:", participants);
-  }, [participants]);
-
   // Ensure at least current user is added when participants list is empty
   const effectiveParticipants = React.useMemo(() => {
     if (participants && participants.length > 0) {
-      // Log the actual participants we're using
-      console.log("Using provided participants:", participants.length);
       return participants;
     }
 
     // If participants list is empty, create a default with just the current user
     if (currentUser) {
-      console.log("Creating default participant with current user");
       return [
         {
           id: currentUser.uid || currentUserId || "local-user",

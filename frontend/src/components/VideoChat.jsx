@@ -41,13 +41,16 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
   const peerInitializedRef = useRef(false);
   const audioElementsRef = useRef({});
   const resetTimeoutRef = useRef(null);
+  const pendingCallsRef = useRef([]);
+  const isReconnectingRef = useRef(false);
+  const lastPeerIdRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
+  const alreadyJoinedRef = useRef(false);
 
   // Create participant list from participants prop and peer connections
   const effectiveParticipants = React.useMemo(() => {
     // Use provided participants if available
     if (participants && participants.length > 0) {
-      // Log participants for debugging
-      console.log("VideoChat received participants:", participants);
       return participants;
     }
 
@@ -89,13 +92,6 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
     videoEnabled,
   ]);
 
-  // When participants change, log it
-  useEffect(() => {
-    if (participants && participants.length > 0) {
-      console.log("VideoChat participants updated:", participants);
-    }
-  }, [participants]);
-
   // Sync stream state with context
   useEffect(() => {
     if (myStreamRef.current && !myStream) {
@@ -113,7 +109,7 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
           .catch((e) => console.warn("Video play error:", e));
       }
     }
-  }, [myStreamRef.current, myStream]);
+  }, [myStreamRef.current, myStream, updateMyStreamContext]);
 
   // Sync peer data for rendering
   useEffect(() => {
@@ -122,12 +118,18 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       newPeersData[userId] = { stream: peerStreamsRef.current[userId] };
     });
 
-    const currentPeersStr = JSON.stringify(peersData);
-    const newPeersStr = JSON.stringify(newPeersData);
+    const currentPeersStr = JSON.stringify(Object.keys(peersData).sort());
+    const newPeersStr = JSON.stringify(Object.keys(newPeersData).sort());
     if (currentPeersStr !== newPeersStr) {
+      console.log(
+        "Updating peers data from",
+        Object.keys(peersData),
+        "to",
+        Object.keys(newPeersData)
+      );
       setPeersData(newPeersData);
     }
-  }, [Object.keys(peerStreamsRef.current).join(",")]);
+  }, [Object.keys(peerStreamsRef.current).join(","), peersData]);
 
   // Manage audio elements
   useEffect(() => {
@@ -167,7 +169,8 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       !sessionId ||
       !connected ||
       videoInitialized ||
-      peerInitializedRef.current
+      peerInitializedRef.current ||
+      isReconnectingRef.current
     ) {
       return;
     }
@@ -179,6 +182,10 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
     let peerId = `${currentUser.uid}-${sessionId}-${Math.random()
       .toString(36)
       .substring(2, 8)}`;
+
+    // Save the peer ID for comparison
+    lastPeerIdRef.current = peerId;
+
     const isProduction = window.location.hostname !== "localhost";
 
     // Get the appropriate API URL based on environment
@@ -210,10 +217,10 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
           { urls: "stun:stun1.l.google.com:19302" },
         ],
       },
+      debug: 1, // Reduce debug level to limit console messages
     };
 
     let retryTimeout = null;
-    let connectionAttempts = 0;
     const maxAttempts = 3;
 
     const initializePeer = () => {
@@ -228,69 +235,123 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       }
 
       // Check max attempts
-      if (connectionAttempts >= maxAttempts) return;
-      connectionAttempts++;
+      if (reconnectAttemptsRef.current >= maxAttempts) {
+        console.warn(
+          `Exceeded max reconnection attempts (${maxAttempts}), stopping reconnection`
+        );
+        peerInitializedRef.current = false;
+        isReconnectingRef.current = false;
+        reconnectAttemptsRef.current = 0;
+        return;
+      }
+
+      // If reconnecting, increment attempts
+      if (isReconnectingRef.current) {
+        reconnectAttemptsRef.current++;
+      }
 
       try {
+        console.log(`Creating PeerJS instance with ID: ${peerId}`);
         const peer = new Peer(peerId, peerConfig);
         setMyPeerContext(peer);
 
         // Connection opened
         peer.on("open", (id) => {
           console.log("PeerJS connection open:", id);
-          connectionAttempts = 0;
+          reconnectAttemptsRef.current = 0;
+          isReconnectingRef.current = false;
           startMedia(peer);
+
+          // Process any pending calls
+          processDelayedCalls();
         });
 
         // Handle errors
         peer.on("error", (error) => {
           console.error("PeerJS error:", error);
-          setMyPeerContext(null);
 
           // Handle specific errors
           if (error.type === "unavailable-id") {
             peerId = `${currentUser.uid}-${sessionId}-${Math.random()
               .toString(36)
               .substring(2, 8)}`;
+            console.log(`ID collision, trying new ID: ${peerId}`);
+            lastPeerIdRef.current = peerId;
             retryTimeout = setTimeout(initializePeer, 1000);
           } else if (
             ["network", "server-error", "disconnected"].includes(error.type)
           ) {
-            retryTimeout = setTimeout(initializePeer, 3000);
+            // Only retry if not already reconnecting
+            if (!isReconnectingRef.current) {
+              isReconnectingRef.current = true;
+              retryTimeout = setTimeout(initializePeer, 3000);
+            }
           }
         });
 
         // Handle disconnection
         peer.on("disconnected", () => {
           console.log("Peer disconnected, attempting reconnect");
-          if (connectionAttempts < maxAttempts) {
+
+          // Prevent multiple reconnection attempts
+          if (
+            !isReconnectingRef.current &&
+            reconnectAttemptsRef.current < maxAttempts
+          ) {
+            isReconnectingRef.current = true;
             retryTimeout = setTimeout(() => {
               try {
-                peer.reconnect();
+                // Try to reconnect the existing peer first
+                if (peer && !peer.destroyed) {
+                  peer.reconnect();
+                } else {
+                  // If peer is destroyed, create a new one
+                  initializePeer();
+                }
               } catch (e) {
+                console.error("Error during reconnection:", e);
                 initializePeer();
               }
-            }, 2000);
+            }, 3000);
+          } else {
+            console.log(
+              "Already reconnecting or max attempts reached, skipping"
+            );
           }
         });
 
         // Handle incoming calls
         peer.on("call", (call) => {
+          console.log("Incoming call from:", call.peer);
           const userId = call.peer.split("-")[0];
-          if (peerConnectionsRef.current[userId]) return; // Skip duplicates
 
-          if (myStreamRef.current) {
-            call.answer(myStreamRef.current);
-            setupCallHandlers(call, userId);
-          } else {
-            console.warn(
-              "Received call but have no local stream to answer with"
-            );
+          // Skip if we already have a connection for this user
+          if (peerConnectionsRef.current[userId]) {
+            console.log(`Already have connection for ${userId}, ignoring call`);
+            return;
           }
+
+          // Store the call temporarily if we don't have a stream yet
+          if (!myStreamRef.current) {
+            console.log(
+              "Received call but no local stream yet, delaying answer"
+            );
+            pendingCallsRef.current.push({ call, userId });
+            return;
+          }
+
+          // Answer the call with our stream
+          console.log(`Answering call from ${userId} with local stream`);
+          call.answer(myStreamRef.current);
+          setupCallHandlers(call, userId);
         });
       } catch (err) {
         console.error("Error creating peer:", err);
-        retryTimeout = setTimeout(initializePeer, 3000);
+
+        if (!isReconnectingRef.current) {
+          isReconnectingRef.current = true;
+          retryTimeout = setTimeout(initializePeer, 3000);
+        }
       }
     };
 
@@ -300,8 +361,30 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
     // Cleanup on unmount
     return () => {
       if (retryTimeout) clearTimeout(retryTimeout);
+      peerInitializedRef.current = false;
+      isReconnectingRef.current = false;
     };
-  }, [currentUser, sessionId, connected, videoInitialized]);
+  }, [currentUser, sessionId, connected, videoInitialized, setMyPeerContext]);
+
+  // Function to process any delayed calls once we have a stream
+  const processDelayedCalls = () => {
+    if (pendingCallsRef.current.length > 0 && myStreamRef.current) {
+      console.log(`Processing ${pendingCallsRef.current.length} delayed calls`);
+
+      pendingCallsRef.current.forEach(({ call, userId }) => {
+        try {
+          console.log(`Now answering delayed call from ${userId}`);
+          call.answer(myStreamRef.current);
+          setupCallHandlers(call, userId);
+        } catch (err) {
+          console.error(`Error processing delayed call for ${userId}:`, err);
+        }
+      });
+
+      // Clear the pending calls
+      pendingCallsRef.current = [];
+    }
+  };
 
   // Start media stream
   const startMedia = async (peerInstance) => {
@@ -310,10 +393,13 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       setMyStream(myStreamRef.current);
       notifyServer(peerInstance);
       setVideoInitialized(true);
+      // Process any pending calls
+      processDelayedCalls();
       return;
     }
 
     try {
+      console.log("Requesting media access...");
       // Request media access
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -324,6 +410,14 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
         video: true,
       });
 
+      console.log(
+        "Media access granted, got stream with tracks:",
+        stream
+          .getTracks()
+          .map((t) => `${t.kind}:${t.label}`)
+          .join(", ")
+      );
+
       // Enable tracks by default
       stream.getTracks().forEach((track) => (track.enabled = true));
 
@@ -332,6 +426,9 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       updateMyStreamContext(stream);
       setVideoInitialized(true);
       notifyServer(peerInstance);
+
+      // Process any pending calls now that we have a stream
+      processDelayedCalls();
     } catch (error) {
       console.error("Media access error:", error);
       setVideoEnabled(false);
@@ -354,6 +451,14 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
   const notifyServer = (peerInstance) => {
     if (!socket || !connected || !peerInstance) return;
 
+    // Avoid sending duplicate join notifications
+    if (alreadyJoinedRef.current && lastPeerIdRef.current === peerInstance.id) {
+      console.log("Already joined with this peer ID, skipping notification");
+      return;
+    }
+
+    console.log(`Notifying server about video join: ${peerInstance.id}`);
+
     socket.emit("video-join", {
       sessionId,
       userId: currentUser.uid,
@@ -365,6 +470,10 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       audioEnabled,
       videoEnabled,
     });
+
+    // Mark as joined
+    alreadyJoinedRef.current = true;
+    lastPeerIdRef.current = peerInstance.id;
   };
 
   // Create and manage audio elements
@@ -440,8 +549,17 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
 
   // Set up call event handlers
   const setupCallHandlers = (call, userId) => {
+    console.log(`Setting up call handlers for user ${userId}`);
+
     // Handle incoming stream
     call.on("stream", (remoteStream) => {
+      console.log(
+        `Received stream from ${userId}`,
+        `with ${remoteStream.getVideoTracks().length} video tracks and ${
+          remoteStream.getAudioTracks().length
+        } audio tracks`
+      );
+
       setPeerStream(userId, remoteStream);
       setPeerConnection(userId, call);
       setPeersData((prev) => ({ ...prev, [userId]: { stream: remoteStream } }));
@@ -455,6 +573,7 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
 
     // Handle call close
     call.on("close", () => {
+      console.log(`Call closed with ${userId}`);
       removePeer(userId);
       removeAudioElement(userId);
       setPeersData((prev) => {
@@ -492,6 +611,7 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
 
     // Set source if needed
     if (videoEl.srcObject !== stream) {
+      console.log(`Setting up video element for ${userId}`);
       videoEl.srcObject = stream;
       videoEl.playsInline = true;
       videoEl.setAttribute("playsinline", "");
@@ -515,23 +635,38 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       return;
 
     const handleUserJoined = ({ userId, peerId }) => {
+      console.log(`User joined video: ${userId} with peerId ${peerId}`);
+
       // Skip if self or already connected
       if (
         peerId.startsWith(currentUser.uid) ||
         peerConnectionsRef.current[userId]
-      )
+      ) {
+        console.log(`Skipping call to ${userId}: is self or already connected`);
         return;
+      }
 
       // Call the new peer
       try {
-        const call = peerRef.current.call(peerId, myStreamRef.current);
-        setupCallHandlers(call, userId);
+        // Add a small delay to avoid race conditions
+        setTimeout(() => {
+          if (
+            peerRef.current &&
+            myStreamRef.current &&
+            !peerConnectionsRef.current[userId]
+          ) {
+            console.log(`Initiating call to ${userId} (${peerId}) with stream`);
+            const call = peerRef.current.call(peerId, myStreamRef.current);
+            setupCallHandlers(call, userId);
+          }
+        }, 1000);
       } catch (error) {
-        console.error("Error calling peer:", error);
+        console.error(`Error calling peer ${userId}:`, error);
       }
     };
 
     const handleUserLeft = ({ userId }) => {
+      console.log(`User left video: ${userId}`);
       removePeer(userId);
       removeAudioElement(userId);
       setPeersData((prev) => {
@@ -545,6 +680,11 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
     socket.on("video-user-joined", handleUserJoined);
     socket.on("video-user-left", handleUserLeft);
 
+    // Request current users when joining - but only once
+    if (!alreadyJoinedRef.current) {
+      socket.emit("get-users", { sessionId });
+    }
+
     // Cleanup
     return () => {
       socket.off("video-user-joined", handleUserJoined);
@@ -556,6 +696,9 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
     myStreamRef.current,
     videoInitialized,
     currentUser?.uid,
+    sessionId,
+    removePeer,
+    setPeersData,
   ]);
 
   // Toggle video
@@ -604,6 +747,10 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
     setIsResetting(true);
 
     try {
+      alreadyJoinedRef.current = false;
+      isReconnectingRef.current = false;
+      reconnectAttemptsRef.current = 0;
+
       // Clear timeout if any
       if (resetTimeoutRef.current) {
         clearTimeout(resetTimeoutRef.current);
@@ -633,37 +780,23 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
         }, 500);
       });
 
-      // Reconnect peer if needed
-      if (socket && connected && peerRef.current) {
-        if (peerRef.current.disconnected) {
-          peerRef.current.reconnect();
+      // Destroy and recreate peer
+      if (peerRef.current) {
+        try {
+          peerRef.current.destroy();
+        } catch (e) {}
+        peerRef.current = null;
+      }
 
-          // Wait for reconnection
-          await new Promise((resolve) => {
-            resetTimeoutRef.current = setTimeout(() => {
-              resetTimeoutRef.current = null;
-              resolve();
-            }, 1000);
-          });
-        }
+      // Restart initialization process
+      peerInitializedRef.current = false;
 
-        // Rejoin
-        socket.emit("video-join", {
-          sessionId,
-          userId: currentUser.uid,
-          peerId: peerRef.current.id,
-        });
+      // Wait for a moment
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Update media status
-        socket.emit("media-status-update", {
-          sessionId,
-          audioEnabled: true,
-          videoEnabled: true,
-        });
-
-        // Update local state
-        setAudioEnabled(true);
-        setVideoEnabled(true);
+      // Request users again
+      if (socket && connected) {
+        socket.emit("get-users", { sessionId });
       }
     } catch (error) {
       console.error("Reset failed:", error);
@@ -675,6 +808,8 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
   // Clean up on unmount
   useEffect(() => {
     return () => {
+      console.log("VideoChat component unmounting, cleaning up");
+
       // Clear timeout if any
       if (resetTimeoutRef.current) {
         clearTimeout(resetTimeoutRef.current);
@@ -684,8 +819,22 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       Object.keys(audioElementsRef.current).forEach((userId) => {
         removeAudioElement(userId);
       });
+
+      // Notify server we're leaving
+      if (socket && connected && sessionId) {
+        socket.emit("video-user-left", {
+          sessionId,
+          userId: currentUser?.uid,
+        });
+      }
+
+      // Reset all flags
+      alreadyJoinedRef.current = false;
+      isReconnectingRef.current = false;
+      peerInitializedRef.current = false;
+      reconnectAttemptsRef.current = 0;
     };
-  }, []);
+  }, [connected, currentUser, sessionId, socket]);
 
   // Get peer connection count
   const peerCount = Object.keys(peersData).length;
@@ -790,12 +939,6 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
         >
           {videoEnabled ? <FaVideo /> : <FaVideoSlash />}
         </button>
-        <div className="debug-info">
-          {myStream
-            ? `Cam: ${myStream.getVideoTracks()[0]?.label?.substring(0, 10)}...`
-            : "No Cam"}{" "}
-          | Peers: {Object.keys(peerConnectionsRef.current).length}
-        </div>
       </div>
     </div>
   );

@@ -394,9 +394,10 @@ const setupSocketHandlers = (io) => {
         for (const [socketId, userData] of users.entries()) {
           if (userData.id === userId) {
             userData.hasVideo = true;
+            userData.peerId = peerId; // Store the peer ID
             userUpdated = true;
             console.log(
-              `Updated user ${userId} to have video in session ${sessionId}`
+              `Updated user ${userId} to have video in session ${sessionId} with peerId ${peerId}`
             );
             break;
           }
@@ -425,10 +426,31 @@ const setupSocketHandlers = (io) => {
           );
           io.to(sessionId).emit("users-update", sessionUsers);
         }
+
+        // Get all users with video in this session to notify the new user
+        const usersWithVideo = [];
+        for (const [, userData] of users.entries()) {
+          if (userData.id !== userId && userData.hasVideo && userData.peerId) {
+            usersWithVideo.push({
+              userId: userData.id,
+              peerId: userData.peerId,
+            });
+          }
+        }
+
+        // Send existing video users to the new user first
+        if (usersWithVideo.length > 0) {
+          console.log(
+            `Sending ${usersWithVideo.length} existing video users to ${userId}`
+          );
+          for (const videoUser of usersWithVideo) {
+            socket.emit("video-user-joined", videoUser);
+          }
+        }
       }
 
       // Broadcast to all users in the session that this user has joined video
-      io.to(sessionId).emit("video-user-joined", {
+      socket.to(sessionId).emit("video-user-joined", {
         userId,
         peerId,
       });
@@ -436,6 +458,44 @@ const setupSocketHandlers = (io) => {
       console.log(
         `User ${userId} joined video chat in session ${sessionId} with peer ID ${peerId}`
       );
+    });
+
+    // Handle video user leaving explicitly (different from disconnect)
+    socket.on("video-user-left", (data) => {
+      const { sessionId, userId } = data;
+
+      if (!sessionId || !userId) {
+        return;
+      }
+
+      console.log(
+        `User ${userId} explicitly left video in session ${sessionId}`
+      );
+
+      // Update user's video status in active users
+      if (activeUsers.has(sessionId)) {
+        const users = activeUsers.get(sessionId);
+
+        // Find user and update their video status
+        for (const [socketId, userData] of users.entries()) {
+          if (userData.id === userId) {
+            userData.hasVideo = false;
+            delete userData.peerId;
+            break;
+          }
+        }
+
+        // Notify all users in the session
+        io.to(sessionId).emit("video-user-left", { userId });
+
+        // Also update the users list
+        const sessionUsers = Array.from(users.values()).map((user) => ({
+          ...user,
+          ...userMediaStatus.get(user.id),
+        }));
+
+        io.to(sessionId).emit("users-update", sessionUsers);
+      }
     });
 
     // Handle media status updates
