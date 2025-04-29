@@ -1087,16 +1087,6 @@
     display: flex !important;
   }
 
-  .video-panel {
-    width: 200px;
-    right: var(--spacing-sm);
-    bottom: var(--spacing-sm);
-  }
-
-  .video-panel-placeholder {
-    height: 150px;
-  }
-
   .editor-toolbar {
     flex-wrap: wrap;
     gap: var(--spacing-xs);

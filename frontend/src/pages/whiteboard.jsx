@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { fabric } from "fabric";
 import { useSession } from "../contexts/SessionContext";
 import { useSocket } from "../contexts/SocketContext";
-import { useVideo } from "../contexts/VideoContext";
 import { useAuth } from "../contexts/AuthContext";
 import {
   FaPencilAlt,
@@ -16,10 +15,8 @@ import {
   FaPalette,
   FaSave,
   FaCode,
-  FaUsers,
   FaExclamationTriangle,
 } from "react-icons/fa";
-import VideoChat from "../components/VideoChat";
 import "../styles/pages/Whiteboard.css";
 
 const Whiteboard = () => {
@@ -28,13 +25,6 @@ const Whiteboard = () => {
   const { currentUser } = useAuth();
   const { joinSession, leaveSession, currentSession } = useSession();
   const { socket, connected, authenticate, authenticatedRef } = useSocket();
-  const {
-    isVideoOpen,
-    setIsVideoOpen,
-    openVideoChat,
-    activeVideoSession,
-    setActiveVideoSession,
-  } = useVideo();
 
   const canvasRef = useRef(null);
   const fabricCanvasRef = useRef(null);
@@ -47,13 +37,6 @@ const Whiteboard = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [participants, setParticipants] = useState([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-
-  // Set active video session when this component mounts
-  useEffect(() => {
-    if (sessionId && sessionId !== "new" && sessionId !== activeVideoSession) {
-      setActiveVideoSession(sessionId);
-    }
-  }, [sessionId, activeVideoSession, setActiveVideoSession]);
 
   // Colors palette
   const colors = [
@@ -458,17 +441,6 @@ const Whiteboard = () => {
     }
   };
 
-  // Open or close video chat
-  const toggleVideoChat = () => {
-    if (sessionId === "new") return; // Don't allow video in standalone mode
-
-    if (isVideoOpen) {
-      setIsVideoOpen(false);
-    } else {
-      openVideoChat(sessionId);
-    }
-  };
-
   return (
     <div className="whiteboard-container">
       {/* Whiteboard Header */}
@@ -634,24 +606,6 @@ const Whiteboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Video Panel - only show in collaborative mode */}
-      {sessionId !== "new" && isVideoOpen && (
-        <div className="video-panel">
-          <VideoChat
-            sessionId={sessionId}
-            onClose={() => setIsVideoOpen(false)}
-            participants={participants}
-          />
-        </div>
-      )}
-
-      {/* Only show in collaborative mode */}
-      {sessionId !== "new" && !isVideoOpen && (
-        <button className="video-show-button" onClick={toggleVideoChat}>
-          <FaUsers /> Show Video
-        </button>
       )}
     </div>
   );

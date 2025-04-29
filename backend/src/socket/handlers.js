@@ -11,9 +11,6 @@ const setupSocketHandlers = (io) => {
   // Track authentication attempts to prevent spamming
   const authAttempts = new Map();
 
-  // For tracking media status
-  const userMediaStatus = new Map();
-
   // Reference to platform metrics in Firestore
   const platformMetricsRef = db.collection("platformMetrics").doc("global");
 
@@ -37,7 +34,6 @@ const setupSocketHandlers = (io) => {
           ...storedMetrics,
           lastUpdated: new Date(), // Reset the timestamp to now
         };
-        console.log("Loaded platform metrics from Firestore:", globalStats);
       } else {
         // First time - create the document
         platformMetricsRef
@@ -67,7 +63,6 @@ const setupSocketHandlers = (io) => {
     // Save metrics to Firestore
     platformMetricsRef
       .set(globalStats, { merge: true })
-      .then(() => console.log("Platform metrics saved to Firestore"))
       .catch((err) => console.error("Error saving platform metrics:", err));
 
     // Broadcast updated stats to all connected clients
@@ -122,7 +117,6 @@ const setupSocketHandlers = (io) => {
   scheduleHistoricalSave();
 
   io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
     let currentSessionId = null;
     let currentUser = null;
 
@@ -239,21 +233,8 @@ const setupSocketHandlers = (io) => {
           isHost: false, // Can set host based on session creator
         });
 
-        // Initialize media status
-        if (!userMediaStatus.has(user.uid)) {
-          userMediaStatus.set(user.uid, {
-            audioEnabled: true,
-            videoEnabled: true,
-          });
-        }
-
         // Notify all users in the session about the updated user list
-        const sessionUsers = Array.from(
-          activeUsers.get(sessionId).values()
-        ).map((user) => ({
-          ...user,
-          ...userMediaStatus.get(user.id),
-        }));
+        const sessionUsers = Array.from(activeUsers.get(sessionId).values());
 
         console.log(
           `Emitting users-update with ${sessionUsers.length} users for session ${sessionId}`
@@ -341,195 +322,19 @@ const setupSocketHandlers = (io) => {
           const userSessionKey = `${removedUser.id}:${sessionId}`;
           activeUserSessions.delete(userSessionKey);
 
-          // Also remove media status
-          if (userMediaStatus.has(removedUser.id)) {
-            userMediaStatus.delete(removedUser.id);
-          }
-
           // Notify remaining users about user list change
-          const sessionUsers = Array.from(users.values()).map((user) => ({
-            ...user,
-            ...userMediaStatus.get(user.id),
-          }));
+          const sessionUsers = Array.from(users.values());
 
           console.log(
             `Emitting updated users (${sessionUsers.length}) after user left`
           );
           io.to(sessionId).emit("users-update", sessionUsers);
-
-          // Also emit video left event if needed
-          io.to(sessionId).emit("video-user-left", {
-            userId: removedUser.id,
-          });
         }
       }
 
       // If this was the current session for this socket, clear it
       if (currentSessionId === sessionId) {
         currentSessionId = null;
-      }
-    });
-
-    // Handle video chat join
-    socket.on("video-join", (data) => {
-      const { sessionId, userId, peerId } = data;
-
-      if (!sessionId || !userId) {
-        socket.emit("error", {
-          message: "Session ID and user ID are required",
-        });
-        return;
-      }
-
-      console.log(
-        `User ${userId} joining video chat in session ${sessionId} with peer ID ${peerId}`
-      );
-
-      // Update user's hasVideo status and media status
-      if (activeUsers.has(sessionId)) {
-        const users = activeUsers.get(sessionId);
-        let userUpdated = false;
-
-        // Find and mark the user as having video
-        for (const [socketId, userData] of users.entries()) {
-          if (userData.id === userId) {
-            userData.hasVideo = true;
-            userData.peerId = peerId; // Store the peer ID
-            userUpdated = true;
-            console.log(
-              `Updated user ${userId} to have video in session ${sessionId} with peerId ${peerId}`
-            );
-            break;
-          }
-        }
-
-        // Initialize media status if not already set
-        if (!userMediaStatus.has(userId)) {
-          userMediaStatus.set(userId, {
-            audioEnabled: true,
-            videoEnabled: true,
-          });
-          console.log(
-            `Initialized media status for user ${userId} in session ${sessionId}`
-          );
-        }
-
-        // If user was updated, emit updated user list
-        if (userUpdated) {
-          const sessionUsers = Array.from(users.values()).map((user) => ({
-            ...user,
-            ...userMediaStatus.get(user.id),
-          }));
-
-          console.log(
-            `Emitting updated users (${sessionUsers.length}) after video join`
-          );
-          io.to(sessionId).emit("users-update", sessionUsers);
-        }
-
-        // Get all users with video in this session to notify the new user
-        const usersWithVideo = [];
-        for (const [, userData] of users.entries()) {
-          if (userData.id !== userId && userData.hasVideo && userData.peerId) {
-            usersWithVideo.push({
-              userId: userData.id,
-              peerId: userData.peerId,
-            });
-          }
-        }
-
-        // Send existing video users to the new user first
-        if (usersWithVideo.length > 0) {
-          console.log(
-            `Sending ${usersWithVideo.length} existing video users to ${userId}`
-          );
-          for (const videoUser of usersWithVideo) {
-            socket.emit("video-user-joined", videoUser);
-          }
-        }
-      }
-
-      // Broadcast to all users in the session that this user has joined video
-      socket.to(sessionId).emit("video-user-joined", {
-        userId,
-        peerId,
-      });
-
-      console.log(
-        `User ${userId} joined video chat in session ${sessionId} with peer ID ${peerId}`
-      );
-    });
-
-    // Handle video user leaving explicitly (different from disconnect)
-    socket.on("video-user-left", (data) => {
-      const { sessionId, userId } = data;
-
-      if (!sessionId || !userId) {
-        return;
-      }
-
-      console.log(
-        `User ${userId} explicitly left video in session ${sessionId}`
-      );
-
-      // Update user's video status in active users
-      if (activeUsers.has(sessionId)) {
-        const users = activeUsers.get(sessionId);
-
-        // Find user and update their video status
-        for (const [socketId, userData] of users.entries()) {
-          if (userData.id === userId) {
-            userData.hasVideo = false;
-            delete userData.peerId;
-            break;
-          }
-        }
-
-        // Notify all users in the session
-        io.to(sessionId).emit("video-user-left", { userId });
-
-        // Also update the users list
-        const sessionUsers = Array.from(users.values()).map((user) => ({
-          ...user,
-          ...userMediaStatus.get(user.id),
-        }));
-
-        io.to(sessionId).emit("users-update", sessionUsers);
-      }
-    });
-
-    // Handle media status updates
-    socket.on("media-status-update", (data) => {
-      const { sessionId, audioEnabled, videoEnabled } = data;
-
-      if (!currentUser || !sessionId) {
-        socket.emit("error", { message: "You must join a session first" });
-        return;
-      }
-
-      console.log(
-        `Media status update for user ${currentUser.uid} in session ${sessionId}: audio=${audioEnabled}, video=${videoEnabled}`
-      );
-
-      // Update media status
-      userMediaStatus.set(currentUser.uid, {
-        audioEnabled,
-        videoEnabled,
-      });
-
-      // Get user data
-      if (activeUsers.has(sessionId)) {
-        const users = activeUsers.get(sessionId);
-        const sessionUsers = Array.from(users.values()).map((user) => ({
-          ...user,
-          ...userMediaStatus.get(user.id),
-        }));
-
-        // Broadcast updated user list to everyone in the session
-        console.log(
-          `Emitting updated users (${sessionUsers.length}) after media status update`
-        );
-        io.to(sessionId).emit("users-update", sessionUsers);
       }
     });
 
@@ -572,13 +377,6 @@ const setupSocketHandlers = (io) => {
           : null,
       };
 
-      // If this is a challenge code update, preserve that metadata
-      if (data.fromChallenge) {
-        console.log(
-          `Relaying challenge code update for challenge ${data.challengeId}`
-        );
-      }
-
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("code-update", enrichedData);
 
@@ -604,10 +402,6 @@ const setupSocketHandlers = (io) => {
           : null,
       };
 
-      console.log(
-        `Received whiteboard-draw from user ${currentUser?.uid} in session ${currentSessionId}`
-      );
-
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("whiteboard-draw", enrichedData);
     });
@@ -618,10 +412,6 @@ const setupSocketHandlers = (io) => {
         socket.emit("error", { message: "You must join a session first" });
         return;
       }
-
-      console.log(
-        `Received whiteboard-clear from user ${currentUser?.uid} in session ${currentSessionId}`
-      );
 
       // Add user information to the data
       const enrichedData = {
@@ -645,10 +435,6 @@ const setupSocketHandlers = (io) => {
         return;
       }
 
-      console.log(
-        `Received challenge-selected from user ${currentUser?.uid} in session ${currentSessionId}`
-      );
-
       // Add user information to the data if not already present
       const enrichedData = {
         ...data,
@@ -670,10 +456,6 @@ const setupSocketHandlers = (io) => {
         socket.emit("error", { message: "You must join a session first" });
         return;
       }
-
-      console.log(
-        `Received challenge-closed from user ${currentUser?.uid} in session ${currentSessionId}`
-      );
 
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("challenge-closed", data);
@@ -724,8 +506,7 @@ const setupSocketHandlers = (io) => {
 
     // Handle disconnection
     socket.on("disconnect", () => {
-      console.log("User disconnected:", socket.id);
-
+      // Clean up session data if the user was in a session
       if (currentSessionId && activeUsers.has(currentSessionId)) {
         const users = activeUsers.get(currentSessionId);
         const user = Array.from(users.values()).find(
@@ -734,10 +515,6 @@ const setupSocketHandlers = (io) => {
 
         // Only remove if we found the user
         if (user) {
-          console.log(
-            `User ${user.id} disconnected from session ${currentSessionId}`
-          );
-
           // Remove user from active users
           users.delete(socket.id);
 
@@ -747,53 +524,24 @@ const setupSocketHandlers = (io) => {
           for (const userData of users.values()) {
             if (userData.id === user.id) {
               otherSocketsForUser = true;
-              console.log(
-                `User ${user.id} still has other active connections in session ${currentSessionId}`
-              );
               break;
             }
           }
 
-          if (!otherSocketsForUser && currentUser) {
+          if (!otherSocketsForUser) {
             const userSessionKey = `${user.id}:${currentSessionId}`;
-            console.log(`Removing user-session pair: ${userSessionKey}`);
             activeUserSessions.delete(userSessionKey);
-
-            // Also clean up media status if no other connections
-            if (userMediaStatus.has(user.id)) {
-              userMediaStatus.delete(user.id);
-            }
           }
 
           // If there are no more users in the session, clean up
           if (users.size === 0) {
-            console.log(
-              `No more users in session ${currentSessionId}, cleaning up`
-            );
             activeUsers.delete(currentSessionId);
           } else {
             // Notify remaining users
-            const sessionUsers = Array.from(users.values()).map((user) => ({
-              ...user,
-              ...userMediaStatus.get(user.id),
-            }));
-
+            const sessionUsers = Array.from(users.values());
             io.to(currentSessionId).emit("users-update", sessionUsers);
-
-            // Notify about video chat disconnect
-            if (user && user.id) {
-              io.to(currentSessionId).emit("video-user-left", {
-                userId: user.id,
-              });
-            }
           }
-        } else {
-          console.log(
-            `Socket ${socket.id} not found in session ${currentSessionId}`
-          );
         }
-      } else {
-        console.log(`Socket ${socket.id} not associated with any session`);
       }
 
       // Clear current user and session
@@ -901,13 +649,7 @@ const setupSocketHandlers = (io) => {
         const users = activeUsers.get(sessionId);
 
         // Convert to array for response
-        const usersList = Array.from(users.values()).map((user) => ({
-          ...user,
-          ...(userMediaStatus.get(user.id) || {
-            audioEnabled: true,
-            videoEnabled: true,
-          }),
-        }));
+        const usersList = Array.from(users.values());
 
         console.log(
           `Sending ${usersList.length} users for session ${sessionId}`

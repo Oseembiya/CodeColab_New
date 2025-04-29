@@ -116,16 +116,13 @@ router.get("/public", async (req, res) => {
 
 // Get all sessions (both public and private)
 router.get("/all", async (req, res) => {
-  console.log("Received request for /api/sessions/all endpoint");
   try {
-    console.log("Querying Firestore for all active sessions");
     const sessionsSnapshot = await sessionsCollection
       .where("isActive", "==", true)
       .orderBy("createdAt", "desc")
       .limit(100)
       .get();
 
-    console.log(`Found ${sessionsSnapshot.size} sessions in the database`);
     const sessions = [];
     sessionsSnapshot.forEach((doc) => {
       const data = doc.data();
@@ -141,7 +138,6 @@ router.get("/all", async (req, res) => {
       });
     });
 
-    console.log(`Returning ${sessions.length} sessions to client`);
     res.status(200).json({
       status: "success",
       data: sessions,

@@ -1,12 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSession } from "../contexts/SessionContext";
 import { useSocket } from "../contexts/SocketContext";
-import { useVideo } from "../contexts/VideoContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useUserMetrics } from "../contexts/UserMetricsContext";
-import { FaUsers } from "react-icons/fa";
-import VideoChat from "../components/VideoChat";
 import ParticipantsList from "../components/ParticipantsList";
 import {
   SessionHeader,
@@ -21,6 +18,7 @@ import {
 } from "../components/Session";
 import "../styles/pages/Session.css";
 import { toast } from "react-hot-toast";
+import React from "react";
 
 // Main Session Component
 const SessionRefactored = () => {
@@ -29,13 +27,6 @@ const SessionRefactored = () => {
   const { currentUser } = useAuth();
   const { currentSession, joinSession, leaveSession } = useSession();
   const { socket, connected, authenticate } = useSocket();
-  const {
-    isVideoOpen,
-    setIsVideoOpen,
-    openVideoChat,
-    activeVideoSession,
-    setActiveVideoSession,
-  } = useVideo();
   const { incrementMetrics } = useUserMetrics();
 
   const editorRef = useRef(null);
@@ -119,51 +110,6 @@ const SessionRefactored = () => {
       starterCode: "function fizzBuzz(n) {\n  // Your code here\n  \n}",
     },
   ];
-
-  // Set active video session when this component mounts
-  useEffect(() => {
-    if (sessionId && sessionId !== "new" && sessionId !== activeVideoSession) {
-      setActiveVideoSession(sessionId);
-    }
-  }, [sessionId, activeVideoSession, setActiveVideoSession]);
-
-  // Load challenge from localStorage on mount - load FIRST, before other initialization
-  useEffect(() => {
-    if (sessionId) {
-      // Check if we have a saved challenge for this session
-      const savedChallenge = localStorage.getItem(`challenge_${sessionId}`);
-      if (savedChallenge) {
-        try {
-          const parsedChallenge = JSON.parse(savedChallenge);
-          setCurrentChallenge(parsedChallenge);
-
-          // Also load the saved code if available
-          const savedCode = localStorage.getItem(`challenge_code_${sessionId}`);
-          if (savedCode) {
-            console.log("Loading saved challenge code from localStorage");
-            setCode(savedCode);
-            // Set a flag to prevent other initialization from overwriting this code
-            sessionStorage.setItem(`code_loaded_${sessionId}`, "true");
-          } else if (parsedChallenge.starterCode) {
-            // Fallback to starter code if no saved code exists
-            console.log("Loading challenge starter code");
-            setCode(parsedChallenge.starterCode);
-            // Set a flag to prevent other initialization from overwriting this code
-            sessionStorage.setItem(`code_loaded_${sessionId}`, "true");
-          }
-
-          // Load challenges list if empty
-          if (challenges.length === 0) {
-            setAvailableChallenges(predefinedChallenges);
-          }
-        } catch (error) {
-          console.error("Error loading saved challenge:", error);
-          localStorage.removeItem(`challenge_${sessionId}`);
-          localStorage.removeItem(`challenge_code_${sessionId}`);
-        }
-      }
-    }
-  }, [sessionId, challenges.length]);
 
   // Initialize session
   useEffect(() => {
@@ -715,62 +661,43 @@ const SessionRefactored = () => {
     return "editor-container";
   };
 
-  // Open or close video chat
-  const toggleVideoChat = () => {
-    if (sessionId === "new") return; // Don't allow video in standalone mode
-
-    if (isVideoOpen) {
-      setIsVideoOpen(false);
-    } else {
-      openVideoChat(sessionId);
-    }
-  };
-
-  // Track session time
+  // Load challenge from localStorage on mount - load FIRST, before other initialization
   useEffect(() => {
-    let sessionTimer;
-    let sessionStartTime;
+    if (sessionId) {
+      // Check if we have a saved challenge for this session
+      const savedChallenge = localStorage.getItem(`challenge_${sessionId}`);
+      if (savedChallenge) {
+        try {
+          const parsedChallenge = JSON.parse(savedChallenge);
+          setCurrentChallenge(parsedChallenge);
 
-    // Only track time when in a session
-    if (sessionId && currentUser) {
-      sessionStartTime = new Date();
-
-      // Update session time every 5 minutes
-      sessionTimer = setInterval(() => {
-        const currentTime = new Date();
-        const timeSpentHours =
-          (currentTime - sessionStartTime) / (1000 * 60 * 60);
-
-        if (timeSpentHours >= 0.05) {
-          // 3 minutes minimum (0.05 hours)
-          incrementMetrics({ hoursSpent: timeSpentHours });
-          sessionStartTime = currentTime; // Reset for next interval
-        }
-      }, 5 * 60 * 1000); // Check every 5 minutes
-    }
-
-    return () => {
-      if (codeChangeTimeout) {
-        clearTimeout(codeChangeTimeout);
-      }
-
-      if (sessionTimer) {
-        clearInterval(sessionTimer);
-
-        // Final time update when leaving
-        if (sessionStartTime && currentUser) {
-          const endTime = new Date();
-          const finalTimeSpentHours =
-            (endTime - sessionStartTime) / (1000 * 60 * 60);
-
-          if (finalTimeSpentHours >= 0.01) {
-            // Track if at least 36 seconds (0.01 hours)
-            incrementMetrics({ hoursSpent: finalTimeSpentHours });
+          // Also load the saved code if available
+          const savedCode = localStorage.getItem(`challenge_code_${sessionId}`);
+          if (savedCode) {
+            console.log("Loading saved challenge code from localStorage");
+            setCode(savedCode);
+            // Set a flag to prevent other initialization from overwriting this code
+            sessionStorage.setItem(`code_loaded_${sessionId}`, "true");
+          } else if (parsedChallenge.starterCode) {
+            // Fallback to starter code if no saved code exists
+            console.log("Loading challenge starter code");
+            setCode(parsedChallenge.starterCode);
+            // Set a flag to prevent other initialization from overwriting this code
+            sessionStorage.setItem(`code_loaded_${sessionId}`, "true");
           }
+
+          // Load challenges list if empty
+          if (challenges.length === 0) {
+            setAvailableChallenges(predefinedChallenges);
+          }
+        } catch (error) {
+          console.error("Error loading saved challenge:", error);
+          localStorage.removeItem(`challenge_${sessionId}`);
+          localStorage.removeItem(`challenge_code_${sessionId}`);
         }
       }
-    };
-  }, [sessionId, currentUser, incrementMetrics]);
+    }
+  }, [sessionId, challenges.length]);
 
   // Challenge feature functions
   const handleChallengeButtonClick = () => {
@@ -1012,64 +939,46 @@ const SessionRefactored = () => {
           </div>
         </div>
 
-        {/* Video panel - only show in collaborative mode */}
-        {sessionId !== "new" && isVideoOpen && (
-          <div className="video-panel">
-            <VideoChat
-              sessionId={sessionId}
-              onClose={() => setIsVideoOpen(false)}
-              participants={participants}
-            />
-          </div>
+        {/* Settings panel */}
+        {showSettings && (
+          <SettingsPanel
+            setShowSettings={setShowSettings}
+            theme={theme}
+            setTheme={setTheme}
+            fontSize={fontSize}
+            setFontSize={setFontSize}
+            handleFontSizeChange={handleFontSizeChange}
+          />
         )}
 
-        {/* Show video button - only in collaborative mode */}
-        {sessionId !== "new" && !isVideoOpen && (
-          <button className="video-show-button" onClick={toggleVideoChat}>
-            <FaUsers /> Show Video
-          </button>
+        {/* Challenge modal */}
+        {showChallengeModal && (
+          <ChallengeModal
+            setShowChallengeModal={setShowChallengeModal}
+            handleSelectChallenge={handleSelectChallenge}
+            currentChallenge={currentChallenge}
+            challenges={challenges}
+            setCurrentChallenge={setCurrentChallenge}
+          />
+        )}
+
+        {/* Challenge details modal */}
+        {showChallengeDetailsModal && currentChallenge && (
+          <ChallengeDetailsModal
+            currentChallenge={currentChallenge}
+            setShowChallengeDetailsModal={setShowChallengeDetailsModal}
+            handleCloseChallenge={handleCloseChallenge}
+          />
+        )}
+
+        {/* Confirm Close Challenge Modal */}
+        {showConfirmCloseModal && (
+          <ConfirmCloseModal
+            cancelCloseChallenge={cancelCloseChallenge}
+            confirmCloseChallenge={confirmCloseChallenge}
+          />
         )}
       </div>
-
-      {/* Settings panel */}
-      {showSettings && (
-        <SettingsPanel
-          setShowSettings={setShowSettings}
-          theme={theme}
-          setTheme={setTheme}
-          fontSize={fontSize}
-          setFontSize={setFontSize}
-          handleFontSizeChange={handleFontSizeChange}
-        />
-      )}
-
-      {/* Challenge modal */}
-      {showChallengeModal && (
-        <ChallengeModal
-          setShowChallengeModal={setShowChallengeModal}
-          handleSelectChallenge={handleSelectChallenge}
-          currentChallenge={currentChallenge}
-          challenges={challenges}
-          setCurrentChallenge={setCurrentChallenge}
-        />
-      )}
-
-      {/* Challenge details modal */}
-      {showChallengeDetailsModal && currentChallenge && (
-        <ChallengeDetailsModal
-          currentChallenge={currentChallenge}
-          setShowChallengeDetailsModal={setShowChallengeDetailsModal}
-          handleCloseChallenge={handleCloseChallenge}
-        />
-      )}
-
-      {/* Confirm Close Challenge Modal */}
-      {showConfirmCloseModal && (
-        <ConfirmCloseModal
-          cancelCloseChallenge={cancelCloseChallenge}
-          confirmCloseChallenge={confirmCloseChallenge}
-        />
-      )}
     </div>
   );
 };

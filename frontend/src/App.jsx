@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { SessionProvider } from "./contexts/SessionContext";
 import { SocketProvider } from "./contexts/SocketContext";
 import { UserMetricsProvider } from "./contexts/UserMetricsContext";
-import { VideoProvider } from "./contexts/VideoContext";
 import { useAuth } from "./contexts/AuthContext";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
@@ -67,132 +66,130 @@ function App() {
       <SocketProvider>
         <UserMetricsProvider>
           <SessionProvider>
-            <VideoProvider>
-              {/* Only show sidebar for authenticated users */}
-              {currentUser && <Sidebar onFoldChange={handleSidebarFold} />}
+            {/* Only show sidebar for authenticated users */}
+            {currentUser && <Sidebar onFoldChange={handleSidebarFold} />}
 
-              <div className="main-content">
-                <Routes>
-                  {/* Auth route - combines login and register */}
-                  <Route
-                    path="/auth"
-                    element={
-                      currentUser ? (
-                        <Navigate to="/dashboard" replace />
-                      ) : (
-                        <Auth />
-                      )
-                    }
-                  />
+            <div className="main-content">
+              <Routes>
+                {/* Auth route - combines login and register */}
+                <Route
+                  path="/auth"
+                  element={
+                    currentUser ? (
+                      <Navigate to="/dashboard" replace />
+                    ) : (
+                      <Auth />
+                    )
+                  }
+                />
 
-                  {/* Root path redirect to dashboard */}
-                  <Route
-                    path="/"
-                    element={
-                      currentUser ? (
-                        <Navigate to="/dashboard" replace />
-                      ) : (
-                        <Navigate to="/auth" replace />
-                      )
-                    }
-                  />
+                {/* Root path redirect to dashboard */}
+                <Route
+                  path="/"
+                  element={
+                    currentUser ? (
+                      <Navigate to="/dashboard" replace />
+                    ) : (
+                      <Navigate to="/auth" replace />
+                    )
+                  }
+                />
 
-                  {/* Protected routes */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/sessions"
-                    element={
-                      <ProtectedRoute>
-                        <LiveSessions />
-                      </ProtectedRoute>
-                    }
-                  />
+                {/* Protected routes */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/sessions"
+                  element={
+                    <ProtectedRoute>
+                      <LiveSessions />
+                    </ProtectedRoute>
+                  }
+                />
 
-                  {/* Standalone Mode Routes */}
-                  <Route
-                    path="/standalone-editor"
-                    element={
-                      <ProtectedRoute>
-                        <StandaloneEditor />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/standalone-whiteboard"
-                    element={
-                      <ProtectedRoute>
-                        <StandaloneWhiteboard />
-                      </ProtectedRoute>
-                    }
-                  />
+                {/* Standalone Mode Routes */}
+                <Route
+                  path="/standalone-editor"
+                  element={
+                    <ProtectedRoute>
+                      <StandaloneEditor />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/standalone-whiteboard"
+                  element={
+                    <ProtectedRoute>
+                      <StandaloneWhiteboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-                  {/* Collaborative Mode Routes */}
-                  <Route
-                    path="/session/:sessionId"
-                    element={
-                      <ProtectedRoute>
-                        <Session />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/whiteboard/:sessionId"
-                    element={
-                      <ProtectedRoute>
-                        <Whiteboard />
-                      </ProtectedRoute>
-                    }
-                  />
+                {/* Collaborative Mode Routes */}
+                <Route
+                  path="/session/:sessionId"
+                  element={
+                    <ProtectedRoute>
+                      <Session />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/whiteboard/:sessionId"
+                  element={
+                    <ProtectedRoute>
+                      <Whiteboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-                  {/* Redirect legacy routes */}
-                  <Route
-                    path="/login"
-                    element={<Navigate to="/auth" replace />}
-                  />
-                  <Route
-                    path="/register"
-                    element={<Navigate to="/auth" replace />}
-                  />
+                {/* Redirect legacy routes */}
+                <Route
+                  path="/login"
+                  element={<Navigate to="/auth" replace />}
+                />
+                <Route
+                  path="/register"
+                  element={<Navigate to="/auth" replace />}
+                />
 
-                  {/* Legacy standalone mode redirects */}
-                  <Route
-                    path="/session/new"
-                    element={<Navigate to="/standalone-editor" replace />}
-                  />
-                  <Route
-                    path="/whiteboard/new"
-                    element={<Navigate to="/standalone-whiteboard" replace />}
-                  />
+                {/* Legacy standalone mode redirects */}
+                <Route
+                  path="/session/new"
+                  element={<Navigate to="/standalone-editor" replace />}
+                />
+                <Route
+                  path="/whiteboard/new"
+                  element={<Navigate to="/standalone-whiteboard" replace />}
+                />
 
-                  {/* Catch all unknown routes and redirect */}
-                  <Route
-                    path="*"
-                    element={
-                      currentUser ? (
-                        <Navigate to="/dashboard" replace />
-                      ) : (
-                        <Navigate to="/auth" replace />
-                      )
-                    }
-                  />
-                </Routes>
-              </div>
-            </VideoProvider>
+                {/* Catch all unknown routes and redirect */}
+                <Route
+                  path="*"
+                  element={
+                    currentUser ? (
+                      <Navigate to="/dashboard" replace />
+                    ) : (
+                      <Navigate to="/auth" replace />
+                    )
+                  }
+                />
+              </Routes>
+            </div>
           </SessionProvider>
         </UserMetricsProvider>
       </SocketProvider>

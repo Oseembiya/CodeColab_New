@@ -5,7 +5,6 @@ const socketIO = require("socket.io");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
-const { ExpressPeerServer } = require("peer");
 
 // Load environment variables
 dotenv.config();
@@ -50,28 +49,6 @@ const io = socketIO(server, {
   },
   allowEIO3: true,
   transports: ["polling", "websocket"],
-});
-
-// Initialize PeerJS server with better settings
-const peerServer = ExpressPeerServer(server, {
-  debug: true,
-  path: "/",
-  proxied: true,
-  corsOptions: corsOptions,
-  allow_discovery: true,
-  key: "peerjs", // Explicitly set the key
-});
-
-// Use PeerJS server
-app.use("/peerjs", peerServer);
-
-// PeerJS server events
-peerServer.on("connection", (client) => {
-  console.log(`PeerJS client connected: ${client.id}`);
-});
-
-peerServer.on("disconnect", (client) => {
-  console.log(`PeerJS client disconnected: ${client.id}`);
 });
 
 // Set up socket handlers
@@ -127,7 +104,6 @@ app.use((err, req, res, next) => {
 // Start server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`PeerJS server running on /peerjs`);
   console.log(`Socket.IO server running`);
 });
 
