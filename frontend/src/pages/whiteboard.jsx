@@ -439,16 +439,47 @@ const Whiteboard = () => {
     }
   };
 
+  // Update the getDisplayTitle function to match SessionHeader format
+  const getDisplayTitle = () => {
+    if (sessionId === "new") {
+      return "Standalone Whiteboard";
+    }
+
+    // Check if currentSession exists and has a name/title property
+    let sessionTitle = "Whiteboard: " + sessionId.substring(0, 8);
+
+    if (currentSession) {
+      const displayName = currentSession.name || currentSession.title;
+
+      if (displayName) {
+        if (displayName.startsWith("@")) {
+          sessionTitle = displayName;
+        } else {
+          sessionTitle = `Whiteboard: ${displayName}`;
+        }
+      }
+    }
+
+    return sessionTitle;
+  };
+
+  // Update the document title effect to use getDisplayTitle
+  useEffect(() => {
+    // Set the document title based on the session
+    document.title = `${getDisplayTitle()} - CodeColab`;
+
+    // Clean up when component unmounts
+    return () => {
+      document.title = "CodeColab";
+    };
+  }, [currentSession, sessionId]);
+
   return (
     <div className="whiteboard-container">
       {/* Whiteboard Header */}
       <div className="whiteboard-header">
         <div className="header-left">
-          <h1>
-            {sessionId === "new"
-              ? "Standalone Whiteboard"
-              : `Whiteboard: ${sessionId.substring(0, 8)}`}
-          </h1>
+          <h1>{getDisplayTitle()}</h1>
           <div className="connection-status">
             <span
               className={`status-indicator ${

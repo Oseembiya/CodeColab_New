@@ -148,6 +148,7 @@ export const SessionProvider = ({ children }) => {
           language: sessionData.language,
           description: sessionData.description,
           isPublic: sessionData.isPublic,
+          status: sessionData.status || "active",
         },
         {
           headers: {

@@ -76,11 +76,14 @@ const SessionCard = ({ session, onJoin, onViewDetails }) => {
     return session.participantCount || 1; // Default to 1 if none of the above
   };
 
+  // Get display status - default to "active" if no status
+  const displayStatus = session.status || "active";
+
   return (
     <div className="session-card">
-      <div className="session-header">
+      <div className="session-headers">
         <h3>{session.name || session.title || "Untitled Session"}</h3>
-        <span className={`status-tag ${session.status}`}>{session.status}</span>
+        <span className={`status-tag ${displayStatus}`}>{displayStatus}</span>
       </div>
 
       <div className="session-description">{session.description}</div>
@@ -491,6 +494,7 @@ const LiveSessions = () => {
       const sessionDataWithName = {
         ...sessionDataToSubmit,
         name: sessionDataToSubmit.title,
+        status: "active", // Explicitly set status to active for new sessions
       };
 
       const sessionId = await createSession(sessionDataWithName);
