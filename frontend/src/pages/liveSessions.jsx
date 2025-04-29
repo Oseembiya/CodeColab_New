@@ -57,10 +57,29 @@ const SessionCard = ({ session, onJoin, onViewDetails }) => {
       ? "Private Session"
       : "Join Session";
 
+  // Helper function to get participant count
+  const getParticipantCount = () => {
+    if (!session.participants) return 0;
+
+    if (Array.isArray(session.participants)) {
+      return session.participants.length;
+    }
+
+    if (typeof session.participants === "object") {
+      return Object.keys(session.participants).length;
+    }
+
+    if (typeof session.participants === "number") {
+      return session.participants;
+    }
+
+    return session.participantCount || 1; // Default to 1 if none of the above
+  };
+
   return (
     <div className="session-card">
       <div className="session-header">
-        <h3>{session.name}</h3>
+        <h3>{session.name || session.title || "Untitled Session"}</h3>
         <span className={`status-tag ${session.status}`}>{session.status}</span>
       </div>
 
@@ -71,7 +90,7 @@ const SessionCard = ({ session, onJoin, onViewDetails }) => {
           <FaClock /> {formatTime(session.createdAt)}
         </div>
         <div className="detail-item">
-          <FaUsers /> {session.participants} Participated
+          <FaUsers /> {getParticipantCount()} Participated
         </div>
         <div className="detail-item language">
           <code>{session.language}</code>
@@ -333,6 +352,8 @@ const LiveSessions = () => {
         sessionsMap.set(session.id, {
           ...session,
           isMine: true,
+          // Ensure name is always available
+          name: session.name || session.title || "Untitled Session",
         });
       });
 
@@ -342,6 +363,8 @@ const LiveSessions = () => {
           sessionsMap.set(session.id, {
             ...session,
             isMine: false,
+            // Ensure name is always available
+            name: session.name || session.title || "Untitled Session",
           });
         }
       });
@@ -464,7 +487,13 @@ const LiveSessions = () => {
     const { onSessionCreated, ...sessionDataToSubmit } = sessionData;
 
     try {
-      const sessionId = await createSession(sessionDataToSubmit);
+      // Ensure the name field is set from title for consistency
+      const sessionDataWithName = {
+        ...sessionDataToSubmit,
+        name: sessionDataToSubmit.title,
+      };
+
+      const sessionId = await createSession(sessionDataWithName);
 
       // Get the session details including the code
       const apiBaseUrl =
