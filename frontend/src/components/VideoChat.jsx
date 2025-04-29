@@ -1059,7 +1059,7 @@ const VideoChat = ({ sessionId, onClose, participants = [] }) => {
       setPeerConnection,
       removePeer,
       setVideoInitialized,
-      setIsInitializing,
+      setInitializing,
       handleRemoteStream,
       removeAudioElement,
       peerRef,
