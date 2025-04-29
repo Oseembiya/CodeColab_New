@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { SessionProvider } from "./contexts/SessionContext";
 import { SocketProvider } from "./contexts/SocketContext";
 import { UserMetricsProvider } from "./contexts/UserMetricsContext";
@@ -15,7 +15,6 @@ import Whiteboard from "./pages/whiteboard";
 import StandaloneEditor from "./pages/standaloneEditor";
 import StandaloneWhiteboard from "./pages/standaloneWhiteboard";
 import LiveSessions from "./pages/liveSessions";
-import NotFound from "./pages/notFound";
 import "./styles/App.css";
 
 // Protected route component
@@ -32,7 +31,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isSidebarFolded, setIsSidebarFolded] = useState(false);
   const { currentUser } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Remove loading state after a short delay
@@ -79,7 +77,23 @@ function App() {
                   <Route
                     path="/auth"
                     element={
-                      currentUser ? <Navigate to="/" replace /> : <Auth />
+                      currentUser ? (
+                        <Navigate to="/dashboard" replace />
+                      ) : (
+                        <Auth />
+                      )
+                    }
+                  />
+
+                  {/* Root path redirect to dashboard */}
+                  <Route
+                    path="/"
+                    element={
+                      currentUser ? (
+                        <Navigate to="/dashboard" replace />
+                      ) : (
+                        <Navigate to="/auth" replace />
+                      )
                     }
                   />
 
@@ -165,12 +179,12 @@ function App() {
                     element={<Navigate to="/standalone-whiteboard" replace />}
                   />
 
-                  {/* 404 route - also protected */}
+                  {/* Catch all unknown routes and redirect */}
                   <Route
                     path="*"
                     element={
                       currentUser ? (
-                        <NotFound />
+                        <Navigate to="/dashboard" replace />
                       ) : (
                         <Navigate to="/auth" replace />
                       )

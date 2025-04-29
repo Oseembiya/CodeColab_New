@@ -78,8 +78,8 @@ const Auth = () => {
 
     try {
       await login(loginData.email, loginData.password);
-      setSuccess("Login successful! Redirecting...");
-      setTimeout(() => navigate("/"), 1500);
+      setSuccess("Login successful!");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.message || "Failed to log in");
       setIsLoading(false);
@@ -140,8 +140,8 @@ const Auth = () => {
         await loginWithGithub();
       }
 
-      setSuccess("Login successful! Redirecting...");
-      setTimeout(() => navigate("/"), 1500);
+      setSuccess("Login successful!");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.message || `Failed to authenticate with ${provider}`);
       setIsLoading(false);
