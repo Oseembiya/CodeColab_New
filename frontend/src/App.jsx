@@ -6,7 +6,7 @@ import { UserMetricsProvider } from "./contexts/UserMetricsContext";
 import { useAuth } from "./contexts/AuthContext";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/dashboard";
 import Auth from "./pages/auth";
 import Profile from "./pages/profile";
 import Session from "./pages/session";
