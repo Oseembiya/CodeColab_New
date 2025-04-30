@@ -1326,7 +1326,7 @@ body.resizing .output-resize-handle {
 /* Video Chat Wrapper */
 .video-chat-wrapper {
   position: absolute;
-  top: 70px;
+  bottom: 20px;
   right: 20px;
   width: 320px;
   height: 400px;
