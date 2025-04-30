@@ -517,8 +517,8 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
                 autoPlay
                 playsInline
               />
-              <div className="participant-info">
-                <span className="participant-name">
+              <div className="video-chat-participant-info">
+                <span className="video-chat-participant-name">
                   {getParticipantName(userId)}
                 </span>
                 {userId === currentUser.uid && (

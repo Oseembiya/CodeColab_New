@@ -96,7 +96,7 @@
   object-fit: cover;
 }
 
-.participant-info {
+.video-chat-participant-info {
   position: absolute;
   bottom: 10px;
   left: 10px;
@@ -106,7 +106,7 @@
   align-items: center;
 }
 
-.participant-name {
+.video-chat-participant-name {
   background: rgba(0, 0, 0, 0.6);
   color: white;
   padding: 3px 8px;
