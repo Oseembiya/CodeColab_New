@@ -22,6 +22,9 @@ const setupSocketHandlers = (io) => {
     lastUpdated: new Date(),
   };
 
+  // Track whiteboard state for each session
+  const whiteboardStates = new Map();
+
   // Load existing metrics from Firestore on startup
   platformMetricsRef
     .get()
@@ -402,6 +405,40 @@ const setupSocketHandlers = (io) => {
           : null,
       };
 
+      // Ensure each object has a unique ID for identification
+      if (enrichedData.objects && Array.isArray(enrichedData.objects)) {
+        enrichedData.objects.forEach((obj) => {
+          if (!obj.id) {
+            obj.id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          }
+        });
+      }
+
+      // Store whiteboard objects for persistence
+      if (!whiteboardStates.has(currentSessionId)) {
+        whiteboardStates.set(currentSessionId, []);
+      }
+
+      const sessionWhiteboardState = whiteboardStates.get(currentSessionId);
+
+      // Add new objects to the stored state
+      if (enrichedData.objects && Array.isArray(enrichedData.objects)) {
+        enrichedData.objects.forEach((obj) => {
+          // Check if this object already exists in state (by ID)
+          const existingIndex = sessionWhiteboardState.findIndex(
+            (existingObj) => existingObj.id === obj.id
+          );
+
+          if (existingIndex >= 0) {
+            // Update existing object
+            sessionWhiteboardState[existingIndex] = obj;
+          } else {
+            // Add new object
+            sessionWhiteboardState.push(obj);
+          }
+        });
+      }
+
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("whiteboard-draw", enrichedData);
     });
@@ -423,6 +460,11 @@ const setupSocketHandlers = (io) => {
             }
           : null,
       };
+
+      // Clear stored whiteboard state
+      if (whiteboardStates.has(currentSessionId)) {
+        whiteboardStates.set(currentSessionId, []);
+      }
 
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("whiteboard-clear", enrichedData);
@@ -479,8 +521,134 @@ const setupSocketHandlers = (io) => {
           : null,
       };
 
+      // Ensure object has an ID for identification
+      if (enrichedData.object && !enrichedData.object.id) {
+        enrichedData.object.id = `${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+      }
+
+      // Update in stored whiteboard state
+      if (whiteboardStates.has(currentSessionId) && enrichedData.object) {
+        const sessionWhiteboardState = whiteboardStates.get(currentSessionId);
+
+        // Find and update the object in the state
+        const existingIndex = sessionWhiteboardState.findIndex(
+          (obj) => obj.id === enrichedData.object.id
+        );
+
+        if (existingIndex >= 0) {
+          // Update existing object
+          sessionWhiteboardState[existingIndex] = enrichedData.object;
+        } else {
+          // Add as new object if not found
+          sessionWhiteboardState.push(enrichedData.object);
+        }
+      }
+
       // Broadcast to everyone in the session except the sender
       socket.to(currentSessionId).emit("whiteboard-update", enrichedData);
+    });
+
+    // Handle whiteboard state requests
+    socket.on("whiteboard-request-state", async (data) => {
+      if (!currentSessionId) {
+        socket.emit("error", { message: "You must join a session first" });
+        return;
+      }
+
+      const { sessionId } = data;
+
+      if (sessionId !== currentSessionId) {
+        socket.emit("error", { message: "Session ID mismatch" });
+        return;
+      }
+
+      console.log(
+        `User ${
+          currentUser?.uid || socket.id
+        } requested whiteboard state for session ${sessionId}`
+      );
+
+      // Check if we have stored state first
+      if (
+        whiteboardStates.has(sessionId) &&
+        whiteboardStates.get(sessionId).length > 0
+      ) {
+        // Send the stored state directly to the requesting client
+        const storedObjects = whiteboardStates.get(sessionId);
+
+        console.log(
+          `Sending stored whiteboard state with ${storedObjects.length} objects`
+        );
+
+        socket.emit("whiteboard-state", {
+          sessionId,
+          objects: storedObjects,
+          source: "server-stored",
+        });
+      } else {
+        // Fall back to requesting state from other clients
+        socket.to(sessionId).emit("whiteboard-state-request", {
+          sessionId,
+          requestingUserId: currentUser?.uid || socket.id,
+          socketId: socket.id,
+        });
+      }
+    });
+
+    // Handle whiteboard state response
+    socket.on("whiteboard-state-response", (data) => {
+      if (!currentSessionId) {
+        socket.emit("error", { message: "You must join a session first" });
+        return;
+      }
+
+      const { sessionId, objects, targetSocketId } = data;
+
+      if (!targetSocketId || !sessionId || !objects) {
+        socket.emit("error", { message: "Invalid state response data" });
+        return;
+      }
+
+      console.log(
+        `User ${
+          currentUser?.uid || socket.id
+        } sending whiteboard state to ${targetSocketId}`
+      );
+
+      // Update the stored state with these objects
+      if (objects.length > 0) {
+        if (!whiteboardStates.has(sessionId)) {
+          whiteboardStates.set(sessionId, [...objects]);
+        } else {
+          const currentState = whiteboardStates.get(sessionId);
+
+          // Merge objects, updating existing ones and adding new ones
+          objects.forEach((newObj) => {
+            const existingIndex = currentState.findIndex(
+              (obj) => obj.id === newObj.id
+            );
+            if (existingIndex >= 0) {
+              currentState[existingIndex] = newObj;
+            } else {
+              currentState.push(newObj);
+            }
+          });
+        }
+      }
+
+      // Send the state directly to the requesting socket
+      io.to(targetSocketId).emit("whiteboard-state", {
+        sessionId,
+        objects,
+        user: currentUser
+          ? {
+              id: currentUser.uid,
+              name: currentUser.displayName || currentUser.email,
+            }
+          : null,
+      });
     });
 
     // Handle chat messages

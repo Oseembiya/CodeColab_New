@@ -19,6 +19,21 @@ import {
 } from "react-icons/fa";
 import "../styles/pages/Whiteboard.css";
 
+// Extend Fabric.js to better handle object IDs
+const extendFabric = () => {
+  // Extend the Fabric Object prototype to include ID in its toObject method
+  fabric.Object.prototype.toObject = (function (toObject) {
+    return function (propertiesToInclude) {
+      // Add 'id' to the properties that should be serialized
+      propertiesToInclude = (propertiesToInclude || []).concat([
+        "id",
+        "userId",
+      ]);
+      return toObject.call(this, propertiesToInclude);
+    };
+  })(fabric.Object.prototype.toObject);
+};
+
 const Whiteboard = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
@@ -31,12 +46,22 @@ const Whiteboard = () => {
   const fabricCanvasRef = useRef(null);
   const isUnmountingRef = useRef(false);
   const sessionInitializedRef = useRef(false);
+  const initialSyncDoneRef = useRef(false);
 
   const [activeTool, setActiveTool] = useState("pencil");
   const [activeColor, setActiveColor] = useState("#5c5fbb");
   const [brushWidth, setBrushWidth] = useState(3);
   const [isDrawing, setIsDrawing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [users, setUsers] = useState([]);
+
+  // Helper function to generate a unique ID with user identifier
+  const generateId = () => {
+    const userId = currentUser?.uid || "anonymous";
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 10);
+    return `${userId}-${timestamp}-${random}`;
+  };
 
   // Colors palette
   const colors = [
@@ -50,6 +75,9 @@ const Whiteboard = () => {
 
   // Initialize canvas and fabric
   useEffect(() => {
+    // Extend Fabric.js functionality
+    extendFabric();
+
     // Check if canvas already initialized
     if (fabricCanvasRef.current) {
       return;
@@ -77,8 +105,17 @@ const Whiteboard = () => {
     // Handle drawing events - only send to server in collaborative mode
     canvas.on("path:created", (e) => {
       if (socket && connected && !standalone) {
+        // Ensure path has an ID and user ID
+        const path = e.path;
+        if (!path.id) {
+          path.id = generateId();
+        }
+
+        // Add user ID to track who created this object
+        path.userId = currentUser?.uid || "anonymous";
+
         // Send drawing data to server
-        const pathAsJson = e.path.toJSON();
+        const pathAsJson = path.toJSON();
         console.log("Sending whiteboard-draw event:", pathAsJson.type);
         socket.emit("whiteboard-draw", {
           sessionId,
@@ -90,8 +127,19 @@ const Whiteboard = () => {
     // Handle object modification - only send to server in collaborative mode
     canvas.on("object:modified", (e) => {
       if (socket && connected && !standalone) {
+        // Ensure object has an ID and user ID
+        const obj = e.target;
+        if (!obj.id) {
+          obj.id = generateId();
+        }
+
+        // Add user ID if not present
+        if (!obj.userId) {
+          obj.userId = currentUser?.uid || "anonymous";
+        }
+
         // Send updated object to server
-        const objectAsJson = e.target.toJSON();
+        const objectAsJson = obj.toJSON();
         console.log("Sending whiteboard-update event:", objectAsJson.type);
         socket.emit("whiteboard-update", {
           sessionId,
@@ -111,6 +159,13 @@ const Whiteboard = () => {
 
     window.addEventListener("resize", handleResize);
 
+    // Wait a short delay to ensure canvas has properly mounted and sized
+    setTimeout(() => {
+      if (sessionId !== "new" && socket && connected) {
+        requestWhiteboardState();
+      }
+    }, 500);
+
     // Clean up
     return () => {
       window.removeEventListener("resize", handleResize);
@@ -119,12 +174,30 @@ const Whiteboard = () => {
         fabricCanvasRef.current = null;
       }
     };
-  }, [activeColor, brushWidth, sessionId, socket, connected]);
+  }, [activeColor, brushWidth, sessionId, socket, connected, currentUser]);
+
+  // Request current whiteboard state when joining a session
+  const requestWhiteboardState = () => {
+    if (
+      !socket ||
+      !connected ||
+      sessionId === "new" ||
+      isUnmountingRef.current
+    ) {
+      return;
+    }
+
+    console.log("Requesting whiteboard state");
+    socket.emit("whiteboard-request-state", {
+      sessionId,
+    });
+  };
 
   // Join session and setup socket listeners
   useEffect(() => {
     let isMounted = true; // Track mount status
     isUnmountingRef.current = false;
+    initialSyncDoneRef.current = false;
 
     const initSession = async () => {
       if (!sessionId || sessionId === "new") {
@@ -185,10 +258,23 @@ const Whiteboard = () => {
             "objects from user",
             data.user?.id
           );
+
           fabric.util.enlivenObjects(data.objects, (objects) => {
             if (fabricCanvasRef.current) {
               // Double check canvas ref
-              objects.forEach((obj) => fabricCanvasRef.current.add(obj));
+              objects.forEach((obj) => {
+                // Ensure the object has an ID
+                if (!obj.id) {
+                  obj.id = `${
+                    data.user?.id || "remote"
+                  }-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                }
+                // Add userId if not present
+                if (!obj.userId && data.user?.id) {
+                  obj.userId = data.user.id;
+                }
+                fabricCanvasRef.current.add(obj);
+              });
               fabricCanvasRef.current.requestRenderAll(); // Use requestRenderAll for better perf
             }
           });
@@ -206,12 +292,33 @@ const Whiteboard = () => {
             "Whiteboard: Received update event from user",
             data.user?.id
           );
+
           const canvas = fabricCanvasRef.current;
           const objects = canvas.getObjects();
+
+          // Check if object has an ID
+          if (!data.object.id) {
+            console.warn("Received object without ID:", data.object);
+            return;
+          }
+
           const targetObject = objects.find((obj) => obj.id === data.object.id);
           if (targetObject) {
+            // Update properties from the received object
             targetObject.set(data.object);
             canvas.requestRenderAll();
+          } else {
+            // If object not found, add it as new
+            fabric.util.enlivenObjects([data.object], (enlivenedObjects) => {
+              if (fabricCanvasRef.current && enlivenedObjects.length > 0) {
+                // Add userId if not present
+                if (!enlivenedObjects[0].userId && data.user?.id) {
+                  enlivenedObjects[0].userId = data.user.id;
+                }
+                fabricCanvasRef.current.add(enlivenedObjects[0]);
+                fabricCanvasRef.current.requestRenderAll();
+              }
+            });
           }
         }
       };
@@ -234,6 +341,68 @@ const Whiteboard = () => {
         }
       };
 
+      // Handler for state request response
+      const handleWhiteboardState = (data) => {
+        if (
+          data.sessionId === sessionId &&
+          fabricCanvasRef.current &&
+          isMounted &&
+          data.objects &&
+          Array.isArray(data.objects) &&
+          data.objects.length > 0
+        ) {
+          console.log(
+            "Whiteboard: Received initial state with",
+            data.objects.length,
+            "objects",
+            data.source || ""
+          );
+
+          // Clear current canvas first
+          fabricCanvasRef.current.clear();
+          fabricCanvasRef.current.setBackgroundColor("#151618", () => {
+            // Add all objects from the state
+            fabric.util.enlivenObjects(data.objects, (objects) => {
+              if (fabricCanvasRef.current && objects.length > 0) {
+                objects.forEach((obj) => {
+                  // Ensure each object has an ID to avoid duplicates
+                  if (!obj.id) {
+                    obj.id = `${
+                      data.user?.id || "system"
+                    }-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                  }
+
+                  // Fix any potentially invalid attributes
+                  if (
+                    obj.type === "path" &&
+                    (!obj.path || obj.path.length === 0)
+                  ) {
+                    console.warn("Skipping invalid path object", obj);
+                    return;
+                  }
+
+                  try {
+                    fabricCanvasRef.current.add(obj);
+                  } catch (err) {
+                    console.error("Error adding object to canvas:", err);
+                  }
+                });
+
+                fabricCanvasRef.current.requestRenderAll();
+                console.log("Successfully restored whiteboard state");
+              }
+            });
+          });
+        } else if (
+          data.sessionId === sessionId &&
+          data.objects &&
+          Array.isArray(data.objects) &&
+          data.objects.length === 0
+        ) {
+          console.log("Received empty whiteboard state");
+        }
+      };
+
       // Handler for user list updates
       const handleUsersUpdate = (users) => {
         if (isMounted) {
@@ -241,6 +410,7 @@ const Whiteboard = () => {
             "Whiteboard: Received users update, count:",
             users.length
           );
+          setUsers(users);
         }
       };
 
@@ -251,6 +421,49 @@ const Whiteboard = () => {
         // Only request users when we've successfully joined the correct room
         if (data.sessionId === sessionId) {
           socket.emit("get-users", { sessionId });
+
+          // Request the current whiteboard state
+          setTimeout(() => {
+            requestWhiteboardState();
+          }, 1000);
+        }
+      };
+
+      // Handler for state requests from other users
+      const handleWhiteboardStateRequest = (data) => {
+        if (
+          data.sessionId === sessionId &&
+          fabricCanvasRef.current &&
+          isMounted
+        ) {
+          console.log(
+            "Whiteboard: Received state request from user",
+            data.requestingUserId
+          );
+
+          // Only respond if we're not the requester and we have a canvas with objects
+          if (
+            data.requestingUserId !== currentUser?.uid &&
+            fabricCanvasRef.current.getObjects().length > 0
+          ) {
+            // Get all objects from the canvas
+            const objects = fabricCanvasRef.current
+              .getObjects()
+              .map((obj) => obj.toJSON());
+
+            // Send our state to the requesting user
+            socket.emit("whiteboard-state-response", {
+              sessionId,
+              objects,
+              targetSocketId: data.socketId,
+            });
+
+            console.log(
+              "Sent whiteboard state with",
+              objects.length,
+              "objects"
+            );
+          }
         }
       };
 
@@ -258,6 +471,8 @@ const Whiteboard = () => {
       socket.off("whiteboard-draw");
       socket.off("whiteboard-update");
       socket.off("whiteboard-clear");
+      socket.off("whiteboard-state");
+      socket.off("whiteboard-state-request");
       socket.off("users-update");
       socket.off("joined-session-room");
 
@@ -265,6 +480,8 @@ const Whiteboard = () => {
       socket.on("whiteboard-draw", handleWhiteboardDraw);
       socket.on("whiteboard-update", handleWhiteboardUpdate);
       socket.on("whiteboard-clear", handleWhiteboardClear);
+      socket.on("whiteboard-state", handleWhiteboardState);
+      socket.on("whiteboard-state-request", handleWhiteboardStateRequest);
       socket.on("users-update", handleUsersUpdate);
       socket.on("joined-session-room", handleJoinedSessionRoom);
 
@@ -274,6 +491,8 @@ const Whiteboard = () => {
           socket.off("whiteboard-draw", handleWhiteboardDraw);
           socket.off("whiteboard-update", handleWhiteboardUpdate);
           socket.off("whiteboard-clear", handleWhiteboardClear);
+          socket.off("whiteboard-state", handleWhiteboardState);
+          socket.off("whiteboard-state-request", handleWhiteboardStateRequest);
           socket.off("users-update", handleUsersUpdate);
           socket.off("joined-session-room", handleJoinedSessionRoom);
         }
@@ -320,6 +539,8 @@ const Whiteboard = () => {
       socket.off("whiteboard-draw");
       socket.off("whiteboard-update");
       socket.off("whiteboard-clear");
+      socket.off("whiteboard-state");
+      socket.off("whiteboard-state-request");
       socket.off("users-update");
       socket.off("joined-session-room");
     }
@@ -329,11 +550,38 @@ const Whiteboard = () => {
     navigate("/whiteboard/new");
   };
 
+  // Handle navigating back to code session view
+  const handleGoToCodeSession = () => {
+    // No need to clean up anything - we want to preserve state
+    // Just navigate to the session view
+    navigate(`/session/${sessionId}`);
+  };
+
   // Update canvas tool when active tool changes
   useEffect(() => {
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
+
+    // Helper function to create shapes and emit updates
+    const createShapeAndEmit = (obj) => {
+      // Add ID to the object
+      obj.id = generateId();
+      obj.userId = currentUser?.uid || "anonymous";
+
+      canvas.add(obj);
+      canvas.setActiveObject(obj);
+      canvas.renderAll();
+
+      // Emit the new object to other users if in collaborative mode
+      if (socket && connected && sessionId !== "new") {
+        const objJson = obj.toJSON();
+        socket.emit("whiteboard-draw", {
+          sessionId,
+          objects: [objJson],
+        });
+      }
+    };
 
     switch (activeTool) {
       case "pencil":
@@ -351,30 +599,66 @@ const Whiteboard = () => {
         break;
       case "rectangle":
         canvas.isDrawingMode = false;
-        setIsDrawing(true);
+        setIsDrawing(false);
+
+        // Create a rectangle at center of canvas
+        const rect = new fabric.Rect({
+          left: canvas.width / 2 - 50,
+          top: canvas.height / 2 - 50,
+          width: 100,
+          height: 100,
+          fill: activeColor,
+          stroke: activeColor,
+          strokeWidth: 2,
+          selectable: true,
+        });
+
+        createShapeAndEmit(rect);
         break;
       case "circle":
         canvas.isDrawingMode = false;
-        setIsDrawing(true);
+        setIsDrawing(false);
+
+        // Create a circle at center of canvas
+        const circle = new fabric.Circle({
+          left: canvas.width / 2 - 50,
+          top: canvas.height / 2 - 50,
+          radius: 50,
+          fill: activeColor,
+          stroke: activeColor,
+          strokeWidth: 2,
+          selectable: true,
+        });
+
+        createShapeAndEmit(circle);
         break;
       case "text":
         canvas.isDrawingMode = false;
+
         // Add text
         const text = new fabric.IText("Click to edit text", {
-          left: canvas.width / 2,
-          top: canvas.height / 2,
+          left: canvas.width / 2 - 75,
+          top: canvas.height / 2 - 10,
           fill: activeColor,
           fontFamily: "Arial",
           fontSize: 20,
+          selectable: true,
         });
-        canvas.add(text);
-        canvas.setActiveObject(text);
-        canvas.renderAll();
+
+        createShapeAndEmit(text);
         break;
       default:
         canvas.isDrawingMode = true;
     }
-  }, [activeTool, activeColor, brushWidth]);
+  }, [
+    activeTool,
+    activeColor,
+    brushWidth,
+    socket,
+    connected,
+    sessionId,
+    currentUser,
+  ]);
 
   // Handle tool selection
   const handleToolSelect = (tool) => {
@@ -508,7 +792,14 @@ const Whiteboard = () => {
               Exit Collaboration
             </button>
           )}
-          <Link to={`/session/${sessionId}`} className="editor-link">
+          <Link
+            to={`/session/${sessionId}`}
+            className="editor-link"
+            onClick={(e) => {
+              e.preventDefault();
+              handleGoToCodeSession();
+            }}
+          >
             <FaCode /> Code Editor
           </Link>
           <button className="save-button" onClick={handleSaveCanvas}>
