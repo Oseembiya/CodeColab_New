@@ -17,9 +17,6 @@ import "../styles/components/VideoChat.css";
 let localPeerJSServerChecked = false;
 let localPeerJSServerAvailable = false;
 
-// Global key for localStorage
-const VIDEO_CHAT_KEY = "codecolab_video_chat_active";
-
 const VideoChat = ({ sessionId, participants, onClose }) => {
   const { socket, connected } = useSocket();
   const { currentUser } = useAuth();
@@ -36,33 +33,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
   const myPeerId = useRef(null);
   const videoRefs = useRef({});
   const activeConnections = useRef(new Set());
-
-  // Save video chat state to localStorage on mount
-  useEffect(() => {
-    if (sessionId && sessionId !== "new") {
-      // Store active video chat session id in localStorage
-      localStorage.setItem(VIDEO_CHAT_KEY, sessionId);
-
-      // Clean up on unmount
-      return () => {
-        // Only remove if this is the current active session
-        // This prevents a new session from removing the localStorage value
-        // when the component is unmounting during navigation
-        if (localStorage.getItem(VIDEO_CHAT_KEY) === sessionId) {
-          // Don't remove when switching views - check the URL to determine
-          // if we're still in the same session just different view
-          const currentPath = window.location.pathname;
-          const isStillInSession =
-            currentPath.includes(`/session/${sessionId}`) ||
-            currentPath.includes(`/whiteboard/${sessionId}`);
-
-          if (!isStillInSession) {
-            localStorage.removeItem(VIDEO_CHAT_KEY);
-          }
-        }
-      };
-    }
-  }, [sessionId]);
 
   // Initialize peer connection
   useEffect(() => {
@@ -494,15 +464,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
   // Count participants
   const participantCount = Object.keys(streams).length;
 
-  // Custom close handler that updates localStorage
-  const handleCloseChat = () => {
-    // Remove active chat from localStorage
-    localStorage.removeItem(VIDEO_CHAT_KEY);
-
-    // Call the onClose handler provided by parent
-    if (onClose) onClose();
-  };
-
   return (
     <div className={`video-chat-container ${expanded ? "expanded" : ""}`}>
       <div className="video-chat-header">
@@ -518,7 +479,7 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
             {expanded ? <FaCompress /> : <FaExpand />}
           </button>
           <button
-            onClick={handleCloseChat}
+            onClick={onClose}
             className="control-button close"
             title="Close"
           >
@@ -611,20 +572,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
       </div>
     </div>
   );
-};
-
-// Export a helper function to check if video chat is active for a sessionId
-export const isVideoChatActive = (sessionId) => {
-  return localStorage.getItem(VIDEO_CHAT_KEY) === sessionId;
-};
-
-// Export a helper to set video chat as active
-export const setVideoChatActive = (sessionId) => {
-  if (sessionId && sessionId !== "new") {
-    localStorage.setItem(VIDEO_CHAT_KEY, sessionId);
-    return true;
-  }
-  return false;
 };
 
 export default VideoChat;
