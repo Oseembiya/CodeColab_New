@@ -1329,19 +1329,10 @@ body.resizing .output-resize-handle {
   bottom: 20px;
   right: 20px;
   width: 320px;
-  height: 400px;
-  background: #1e1e1e;
-  border-radius: 8px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
   z-index: 1000;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
   overflow: hidden;
-  resize: both;
-  min-width: 240px;
-  min-height: 220px;
-  max-width: 90vw;
-  max-height: 80vh;
-  border: 1px solid #333;
-  transition: all 0.3s ease;
 }
 
 /* For expanded view */

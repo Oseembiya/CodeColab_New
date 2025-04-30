@@ -19,7 +19,10 @@ import {
 import "../styles/pages/Session.css";
 import { toast } from "react-hot-toast";
 import React from "react";
-import VideoChat from "../components/VideoChat";
+import VideoChat, {
+  isVideoChatActive,
+  setVideoChatActive,
+} from "../components/VideoChat";
 
 // Main Session Component
 const SessionRefactored = () => {
@@ -75,6 +78,14 @@ const SessionRefactored = () => {
 
   // Video chat feature
   const [showVideoChat, setShowVideoChat] = useState(false);
+
+  // Check for active video chat on mount and when sessionId changes
+  useEffect(() => {
+    if (sessionId && sessionId !== "new") {
+      // Check if video chat is active for this session
+      setShowVideoChat(isVideoChatActive(sessionId));
+    }
+  }, [sessionId]);
 
   // Pre-defined coding challenges
   const predefinedChallenges = [
@@ -866,17 +877,23 @@ const SessionRefactored = () => {
 
   // Inside toggleVideoChat function
   const toggleVideoChat = () => {
-    setShowVideoChat((prev) => !prev);
+    const newState = !showVideoChat;
+    setShowVideoChat(newState);
 
-    // Start tracking time spent in video call for metrics when activating
-    if (!showVideoChat && incrementMetrics) {
-      incrementMetrics({
-        type: "video_call_started",
-        data: {
-          sessionId,
-          timestamp: new Date().toISOString(),
-        },
-      });
+    // Update localStorage
+    if (newState) {
+      setVideoChatActive(sessionId);
+
+      // Start tracking time spent in video call for metrics when activating
+      if (incrementMetrics) {
+        incrementMetrics({
+          type: "video_call_started",
+          data: {
+            sessionId,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
     }
   };
 

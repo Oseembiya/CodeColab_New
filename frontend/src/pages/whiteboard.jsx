@@ -16,7 +16,12 @@ import {
   FaSave,
   FaCode,
   FaExclamationTriangle,
+  FaVideo,
 } from "react-icons/fa";
+import VideoChat, {
+  isVideoChatActive,
+  setVideoChatActive,
+} from "../components/VideoChat";
 import "../styles/pages/Whiteboard.css";
 
 // Extend Fabric.js to better handle object IDs
@@ -54,6 +59,14 @@ const Whiteboard = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [users, setUsers] = useState([]);
+  const [showVideoChat, setShowVideoChat] = useState(false);
+
+  // Check if video chat is active for this session on mount
+  useEffect(() => {
+    if (sessionId && sessionId !== "new") {
+      setShowVideoChat(isVideoChatActive(sessionId));
+    }
+  }, [sessionId]);
 
   // Helper function to generate a unique ID with user identifier
   const generateId = () => {
@@ -557,6 +570,21 @@ const Whiteboard = () => {
     navigate(`/session/${sessionId}`);
   };
 
+  // Toggle video chat
+  const toggleVideoChat = () => {
+    const newState = !showVideoChat;
+    setShowVideoChat(newState);
+
+    if (newState) {
+      setVideoChatActive(sessionId);
+    }
+  };
+
+  // Handle closing video chat
+  const handleCloseVideoChat = () => {
+    setShowVideoChat(false);
+  };
+
   // Update canvas tool when active tool changes
   useEffect(() => {
     if (!fabricCanvasRef.current) return;
@@ -784,13 +812,22 @@ const Whiteboard = () => {
 
         <div className="header-right">
           {sessionId !== "new" && (
-            <button
-              className="exit-collab-button"
-              onClick={handleExitCollaboration}
-              title="Exit collaboration and work in standalone mode"
-            >
-              Exit Collaboration
-            </button>
+            <>
+              <button
+                className="exit-collab-button"
+                onClick={handleExitCollaboration}
+                title="Exit collaboration and work in standalone mode"
+              >
+                Exit Collaboration
+              </button>
+              <button
+                className="video-chat-button"
+                onClick={toggleVideoChat}
+                title="Toggle video chat"
+              >
+                <FaVideo /> Video Chat
+              </button>
+            </>
           )}
           <Link
             to={`/session/${sessionId}`}
@@ -897,6 +934,17 @@ const Whiteboard = () => {
       <div className="canvas-container">
         <canvas ref={canvasRef} />
       </div>
+
+      {/* Video chat component */}
+      {showVideoChat && sessionId !== "new" && (
+        <div className="video-chat-wrapper">
+          <VideoChat
+            sessionId={sessionId}
+            participants={users}
+            onClose={handleCloseVideoChat}
+          />
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
