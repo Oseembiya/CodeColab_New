@@ -96,7 +96,6 @@ const Whiteboard = () => {
       return;
     }
 
-    console.log("Initializing whiteboard canvas");
     const canvas = new fabric.Canvas(canvasRef.current, {
       isDrawingMode: true,
       width: canvasRef.current.offsetWidth,
@@ -129,7 +128,6 @@ const Whiteboard = () => {
 
         // Send drawing data to server
         const pathAsJson = path.toJSON();
-        console.log("Sending whiteboard-draw event:", pathAsJson.type);
         socket.emit("whiteboard-draw", {
           sessionId,
           objects: [pathAsJson],
@@ -153,7 +151,6 @@ const Whiteboard = () => {
 
         // Send updated object to server
         const objectAsJson = obj.toJSON();
-        console.log("Sending whiteboard-update event:", objectAsJson.type);
         socket.emit("whiteboard-update", {
           sessionId,
           object: objectAsJson,
@@ -200,7 +197,6 @@ const Whiteboard = () => {
       return;
     }
 
-    console.log("Requesting whiteboard state");
     socket.emit("whiteboard-request-state", {
       sessionId,
     });
@@ -221,7 +217,6 @@ const Whiteboard = () => {
 
       // If we've already initialized this specific collaborative session, don't do it again
       if (sessionInitializedRef.current && currentSession?.id === sessionId) {
-        console.log("Whiteboard: Session already initialized:", sessionId);
         return;
       }
 
@@ -256,8 +251,6 @@ const Whiteboard = () => {
     const setupWhiteboardListeners = () => {
       if (!socket || !connected || sessionId === "new") return;
 
-      console.log("Setting up whiteboard socket listeners");
-
       // Handler for draw events from other users
       const handleWhiteboardDraw = (data) => {
         if (
@@ -265,13 +258,6 @@ const Whiteboard = () => {
           fabricCanvasRef.current &&
           isMounted
         ) {
-          console.log(
-            "Whiteboard: Received draw event",
-            data.objects.length,
-            "objects from user",
-            data.user?.id
-          );
-
           fabric.util.enlivenObjects(data.objects, (objects) => {
             if (fabricCanvasRef.current) {
               // Double check canvas ref
@@ -449,11 +435,6 @@ const Whiteboard = () => {
           fabricCanvasRef.current &&
           isMounted
         ) {
-          console.log(
-            "Whiteboard: Received state request from user",
-            data.requestingUserId
-          );
-
           // Only respond if we're not the requester and we have a canvas with objects
           if (
             data.requestingUserId !== currentUser?.uid &&
@@ -470,12 +451,6 @@ const Whiteboard = () => {
               objects,
               targetSocketId: data.socketId,
             });
-
-            console.log(
-              "Sent whiteboard state with",
-              objects.length,
-              "objects"
-            );
           }
         }
       };

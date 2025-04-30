@@ -9,16 +9,6 @@
   position: relative;
 }
 
-/* Minimized state */
-.video-chat-container.minimized {
-  height: auto;
-  min-height: unset;
-}
-
-.video-chat-container.minimized .video-chat-header {
-  border-bottom: none;
-}
-
 .video-chat-container.expanded {
   position: fixed;
   top: 0;
@@ -294,35 +284,4 @@
     height: 36px;
     font-size: 16px;
   }
-}
-
-.active-indicator {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 14px;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.5;
-  }
-}
-
-/* Hide content visually but keep in DOM for audio playback */
-.hidden-content {
-  position: absolute;
-  overflow: hidden;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
-  /* Keep elements in DOM but hide visually */
-  display: block !important;
-  visibility: hidden;
 }

@@ -17,6 +17,9 @@ import "../styles/components/VideoChat.css";
 let localPeerJSServerChecked = false;
 let localPeerJSServerAvailable = false;
 
+// Global key for localStorage
+const VIDEO_CHAT_KEY = "codecolab_video_chat_active";
+
 const VideoChat = ({ sessionId, participants, onClose }) => {
   const { socket, connected } = useSocket();
   const { currentUser } = useAuth();
@@ -33,6 +36,33 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
   const myPeerId = useRef(null);
   const videoRefs = useRef({});
   const activeConnections = useRef(new Set());
+
+  // Save video chat state to localStorage on mount
+  useEffect(() => {
+    if (sessionId && sessionId !== "new") {
+      // Store active video chat session id in localStorage
+      localStorage.setItem(VIDEO_CHAT_KEY, sessionId);
+
+      // Clean up on unmount
+      return () => {
+        // Only remove if this is the current active session
+        // This prevents a new session from removing the localStorage value
+        // when the component is unmounting during navigation
+        if (localStorage.getItem(VIDEO_CHAT_KEY) === sessionId) {
+          // Don't remove when switching views - check the URL to determine
+          // if we're still in the same session just different view
+          const currentPath = window.location.pathname;
+          const isStillInSession =
+            currentPath.includes(`/session/${sessionId}`) ||
+            currentPath.includes(`/whiteboard/${sessionId}`);
+
+          if (!isStillInSession) {
+            localStorage.removeItem(VIDEO_CHAT_KEY);
+          }
+        }
+      };
+    }
+  }, [sessionId]);
 
   // Initialize peer connection
   useEffect(() => {
@@ -113,7 +143,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
           });
 
           // Request current participants to connect
-          console.log("Requesting peer connections from existing participants");
           socket.emit("request-peer-connections", {
             sessionId,
             userId: currentUser.uid,
@@ -127,7 +156,7 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
 
           // Handle specific error types
           if (err.type === "peer-unavailable") {
-            console.log("Peer unavailable, they may have left");
+            // Peer unavailable, they may have left
           } else if (
             err.type === "network" ||
             err.type === "disconnected" ||
@@ -164,13 +193,8 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
           // Check if we already have a connection with this user
           const peerKey = call.peer;
           if (activeConnections.current.has(callerId)) {
-            console.log(
-              `Already have a connection with ${callerId}, ignoring duplicate call`
-            );
             return;
           }
-
-          console.log("Receiving call from:", callerId);
 
           // Ensure we have a media stream before answering
           if (!myStream.current) {
@@ -188,7 +212,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
           if (myStream.current) {
             call.answer(myStream.current);
           } else {
-            console.warn("No local stream available to answer call");
             call.answer(); // Answer with no stream
           }
 
@@ -196,15 +219,12 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
           call.on("stream", (remoteStream) => {
             // Only add stream if we don't already have it
             if (!streams[callerId]) {
-              console.log("Received stream from:", callerId);
               setStreams((prev) => ({ ...prev, [callerId]: remoteStream }));
             }
           });
 
           // Handle call close
           call.on("close", () => {
-            console.log("Call closed with:", callerId);
-
             // Remove from active connections
             activeConnections.current.delete(callerId);
 
@@ -222,7 +242,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
         // Listen for peer events from socket
         socket.on("peer-joined", (data) => {
           if (data.userId !== currentUser.uid && data.sessionId === sessionId) {
-            console.log("New peer joined, connecting to:", data.userId);
             connectToPeer(data.peerId, data.userId);
           }
         });
@@ -233,7 +252,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
             data.sessionId === sessionId &&
             myPeer.current
           ) {
-            console.log("Received request to connect from:", data.userId);
             connectToPeer(data.peerId, data.userId);
           }
         });
@@ -241,8 +259,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
         // Clean up peers when users leave
         socket.on("peer-left", (data) => {
           if (data.sessionId === sessionId) {
-            console.log("Peer left:", data.userId);
-
             // Remove from active connections
             activeConnections.current.delete(data.userId);
 
@@ -355,17 +371,13 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
   // Connect to another peer
   const connectToPeer = (peerId, userId) => {
     if (!myPeer.current || !myStream.current) {
-      console.warn("Cannot connect: Peer or Stream not initialized");
       return;
     }
 
     // Don't reconnect if already connected to this user
     if (activeConnections.current.has(userId)) {
-      console.log("Already connected to user:", userId);
       return;
     }
-
-    console.log("Calling peer:", peerId, "for user:", userId);
 
     try {
       // Mark as connected to this user
@@ -376,7 +388,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
       call.on("stream", (remoteStream) => {
         // Only add stream if we don't already have it
         if (!streams[userId]) {
-          console.log("Received stream from call to:", userId);
           setStreams((prev) => ({ ...prev, [userId]: remoteStream }));
         }
       });
@@ -388,7 +399,6 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
       });
 
       call.on("close", () => {
-        console.log("Call closed with:", userId);
         activeConnections.current.delete(userId);
 
         setStreams((prev) => {
@@ -575,3 +585,17 @@ const VideoChat = ({ sessionId, participants, onClose }) => {
 };
 
 export default VideoChat;
+
+// Export a helper function to check if video chat is active for a sessionId
+export const isVideoChatActive = (sessionId) => {
+  return localStorage.getItem(VIDEO_CHAT_KEY) === sessionId;
+};
+
+// Export a helper to set video chat as active
+export const setVideoChatActive = (sessionId) => {
+  if (sessionId && sessionId !== "new") {
+    localStorage.setItem(VIDEO_CHAT_KEY, sessionId);
+    return true;
+  }
+  return false;
+};
