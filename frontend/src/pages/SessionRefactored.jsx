@@ -19,6 +19,7 @@ import {
 import "../styles/pages/Session.css";
 import { toast } from "react-hot-toast";
 import React from "react";
+import VideoChat from "../components/VideoChat";
 
 // Main Session Component
 const SessionRefactored = () => {
@@ -71,6 +72,9 @@ const SessionRefactored = () => {
     difficulty: "Easy",
   });
   const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false);
+
+  // Video chat feature
+  const [showVideoChat, setShowVideoChat] = useState(false);
 
   // Pre-defined coding challenges
   const predefinedChallenges = [
@@ -860,6 +864,38 @@ const SessionRefactored = () => {
     }
   }, [socket, sessionId]);
 
+  // Inside toggleVideoChat function
+  const toggleVideoChat = () => {
+    setShowVideoChat((prev) => !prev);
+
+    // Start tracking time spent in video call for metrics when activating
+    if (!showVideoChat && incrementMetrics) {
+      incrementMetrics({
+        type: "video_call_started",
+        data: {
+          sessionId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+  };
+
+  // Handle closing video chat
+  const handleCloseVideoChat = () => {
+    setShowVideoChat(false);
+
+    // Track video call ended for metrics
+    if (incrementMetrics) {
+      incrementMetrics({
+        type: "video_call_ended",
+        data: {
+          sessionId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+  };
+
   return (
     <div className="session-container">
       {/* Session Header */}
@@ -910,6 +946,7 @@ const SessionRefactored = () => {
             isRunning={isRunning}
             isFullscreen={isFullscreen}
             toggleFullscreen={toggleFullscreen}
+            onToggleVideoChat={toggleVideoChat}
           />
 
           {/* Editor tools bar */}
@@ -1005,6 +1042,21 @@ const SessionRefactored = () => {
             cancelCloseChallenge={cancelCloseChallenge}
             confirmCloseChallenge={confirmCloseChallenge}
           />
+        )}
+
+        {/* Video chat component */}
+        {showVideoChat && sessionId !== "new" && (
+          <div
+            className={`video-chat-wrapper ${
+              isFullscreen ? "fullscreen-minimized" : ""
+            }`}
+          >
+            <VideoChat
+              sessionId={sessionId}
+              participants={participants}
+              onClose={handleCloseVideoChat}
+            />
+          </div>
         )}
       </div>
     </div>

@@ -833,6 +833,23 @@ const setupSocketHandlers = (io) => {
         socket.emit("users-update", []);
       }
     });
+
+    // Handle peer connection requests
+    socket.on("request-peer-connections", (data) => {
+      if (!data.sessionId || !data.userId || !data.peerId) {
+        socket.emit("error", {
+          message: "Invalid peer connection request data",
+        });
+        return;
+      }
+
+      console.log(
+        `User ${data.userId} requesting peer connections in session ${data.sessionId}`
+      );
+
+      // Broadcast to everyone in the session except the sender
+      socket.to(data.sessionId).emit("request-peer-connections", data);
+    });
   });
 
   // Helper function to update session code in the database (with debounce)

@@ -5,6 +5,8 @@ import {
   FaCompress,
   FaPuzzlePiece,
   FaLightbulb,
+  FaVideo,
+  FaVideoSlash,
 } from "react-icons/fa";
 import { BsFillBrushFill } from "react-icons/bs";
 
@@ -21,6 +23,8 @@ const EditorToolbar = ({
   isRunning,
   isFullscreen,
   toggleFullscreen,
+  onToggleVideoChat,
+  showVideoChat,
 }) => {
   return (
     <div className="editor-toolbar">
@@ -64,14 +68,27 @@ const EditorToolbar = ({
 
       <div className="toolbar-right">
         {sessionId !== "new" && (
-          <button
-            className="challenge-button"
-            onClick={handleChallengeButtonClick}
-            title="Choose a coding challenge"
-          >
-            <FaPuzzlePiece />{" "}
-            {currentChallenge ? "Change Challenge" : "Challenges"}
-          </button>
+          <>
+            <button
+              className={`video-chat-button ${showVideoChat ? "active" : ""}`}
+              onClick={onToggleVideoChat}
+              title={showVideoChat ? "Hide Video Chat" : "Show Video Chat"}
+            >
+              {showVideoChat ? <FaVideoSlash /> : <FaVideo />}
+              <span className="button-text">
+                {showVideoChat ? "End Call" : "Video Call"}
+              </span>
+            </button>
+
+            <button
+              className="challenge-button"
+              onClick={handleChallengeButtonClick}
+              title="Choose a coding challenge"
+            >
+              <FaPuzzlePiece />{" "}
+              {currentChallenge ? "Change Challenge" : "Challenges"}
+            </button>
+          </>
         )}
         <button
           className="run-button"
@@ -92,4 +109,4 @@ const EditorToolbar = ({
   );
 };
 
-export default EditorToolbar; 
+export default EditorToolbar;
