@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   FaUser,
   FaEnvelope,
@@ -9,20 +9,30 @@ import {
   FaUserEdit,
   FaPlus,
   FaUsers,
+  FaCode,
+  FaClock,
+  FaUserFriends,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
 import { useAuth } from "../contexts/AuthContext";
 import { db, storage } from "../services/firebase";
+import { toast } from "react-hot-toast";
+import axios from "axios";
 import "../styles/pages/Profile.css";
 
 const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [hasChanges, setHasChanges] = useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const { currentUser } = useAuth();
+  const fileInputRef = useRef(null);
 
   // User profile state
   const [profile, setProfile] = useState({
@@ -35,6 +45,14 @@ const Profile = () => {
     sessions: [],
   });
 
+  // User metrics state
+  const [metrics, setMetrics] = useState({
+    totalSessions: 0,
+    hoursSpent: 0,
+    linesOfCode: 0,
+    collaborations: 0,
+  });
+
   // Form state for editing
   const [formData, setFormData] = useState({
     name: "",
@@ -43,12 +61,53 @@ const Profile = () => {
     newProfileImage: null,
   });
 
+  // Original form data for checking changes
+  const [originalFormData, setOriginalFormData] = useState({
+    name: "",
+    bio: "",
+    profileImage: "",
+  });
+
   // Fetch user profile on load
   useEffect(() => {
     if (currentUser) {
       fetchUserProfile();
+      fetchUserMetrics();
     }
   }, [currentUser]);
+
+  // Check for unsaved changes
+  useEffect(() => {
+    if (isEditing) {
+      const hasUnsavedChanges =
+        formData.name !== originalFormData.name ||
+        formData.bio !== originalFormData.bio ||
+        formData.newProfileImage !== null;
+
+      setHasChanges(hasUnsavedChanges);
+    }
+  }, [formData, originalFormData, isEditing]);
+
+  // Fetch user metrics from API
+  const fetchUserMetrics = async () => {
+    try {
+      // Get auth token
+      const token = await currentUser.getIdToken();
+
+      const response = await axios.get("http://localhost:3001/api/metrics", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.status === "success") {
+        setMetrics(response.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching user metrics:", err);
+      // Don't show error for metrics - non-critical
+    }
+  };
 
   // Fetch real user data from Firestore
   const fetchUserProfile = async () => {
@@ -100,15 +159,23 @@ const Profile = () => {
           .slice(0, 5),
       });
 
-      setFormData({
+      const formValues = {
         name: userData.displayName || currentUser.displayName || "User",
         bio: userData.bio || "",
         profileImage: userData.photoURL || currentUser.photoURL || "",
         newProfileImage: null,
+      };
+
+      setFormData(formValues);
+      setOriginalFormData({
+        name: formValues.name,
+        bio: formValues.bio,
+        profileImage: formValues.profileImage,
       });
     } catch (err) {
       console.error("Error fetching user profile:", err);
       setError("Failed to load profile data");
+      toast.error("Failed to load profile data");
     }
 
     setIsLoading(false);
@@ -127,6 +194,24 @@ const Profile = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      const validImageTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!validImageTypes.includes(file.type)) {
+        toast.error("Please select a valid image file (JPEG, PNG, GIF, WEBP)");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image is too large. Maximum size is 5MB");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData((prev) => ({
@@ -139,15 +224,34 @@ const Profile = () => {
     }
   };
 
+  // Handle clicking on profile image to trigger file input
+  const handleImageClick = () => {
+    if (isEditing && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   // Start editing profile
   const startEditing = () => {
     setIsEditing(true);
     setError("");
     setSuccess("");
+    setHasChanges(false);
+    setShowUnsavedWarning(false);
   };
 
   // Cancel editing and reset form
   const cancelEditing = () => {
+    if (hasChanges) {
+      setShowUnsavedWarning(true);
+      return;
+    }
+
+    resetForm();
+  };
+
+  // Reset form without asking
+  const resetForm = () => {
     setFormData({
       name: profile.name,
       bio: profile.bio,
@@ -156,6 +260,33 @@ const Profile = () => {
     });
     setIsEditing(false);
     setError("");
+    setShowUnsavedWarning(false);
+  };
+
+  // Handle form validation
+  const validateForm = () => {
+    // Reset previous errors
+    setError("");
+
+    // Validate name (required)
+    if (!formData.name.trim()) {
+      setError("Name cannot be empty");
+      return false;
+    }
+
+    // Validate name length
+    if (formData.name.trim().length > 50) {
+      setError("Name must be less than 50 characters");
+      return false;
+    }
+
+    // Validate bio length
+    if (formData.bio.length > 500) {
+      setError("Bio must be less than 500 characters");
+      return false;
+    }
+
+    return true;
   };
 
   // Save profile changes
@@ -163,12 +294,14 @@ const Profile = () => {
     setError("");
     setSuccess("");
 
-    if (!formData.name.trim()) {
-      setError("Name cannot be empty");
+    // Validate form
+    if (!validateForm()) {
       return;
     }
 
-    setIsLoading(true);
+    setIsSaving(true);
+
+    const savingToast = toast.loading("Saving profile changes...");
 
     try {
       // Reference to the user document
@@ -179,7 +312,29 @@ const Profile = () => {
 
       if (formData.newProfileImage) {
         const storageRef = ref(storage, `profile_images/${currentUser.uid}`);
-        await uploadBytesResumable(storageRef, formData.newProfileImage);
+        const uploadTask = uploadBytesResumable(
+          storageRef,
+          formData.newProfileImage
+        );
+
+        // Monitor upload progress
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress =
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            toast.loading(`Uploading image: ${Math.round(progress)}%`, {
+              id: savingToast,
+            });
+          },
+          (error) => {
+            toast.error("Failed to upload profile image", { id: savingToast });
+            throw error;
+          }
+        );
+
+        // Wait for upload to complete
+        await uploadTask;
         photoURL = await getDownloadURL(storageRef);
 
         // Update the auth profile
@@ -194,11 +349,35 @@ const Profile = () => {
         });
       }
 
+      // Update API with backend call
+      try {
+        const token = await currentUser.getIdToken();
+        await axios.post(
+          "http://localhost:3001/api/users/profile",
+          {
+            displayName: formData.name,
+            photoURL,
+            bio: formData.bio,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } catch (apiError) {
+        console.error(
+          "API update failed, falling back to direct Firebase update",
+          apiError
+        );
+      }
+
       // Update the user document in Firestore
       await updateDoc(userDocRef, {
         displayName: formData.name,
         bio: formData.bio,
         photoURL,
+        updatedAt: new Date(),
       });
 
       // Update local profile state
@@ -209,7 +388,16 @@ const Profile = () => {
         profileImage: photoURL,
       }));
 
+      // Update original form data
+      setOriginalFormData({
+        name: formData.name,
+        bio: formData.bio,
+        profileImage: photoURL,
+      });
+
       setIsEditing(false);
+      setHasChanges(false);
+      toast.success("Profile updated successfully!", { id: savingToast });
       setSuccess("Profile updated successfully!");
 
       // Clear success message after 3 seconds
@@ -217,9 +405,10 @@ const Profile = () => {
     } catch (err) {
       console.error("Error updating profile:", err);
       setError("Failed to update profile");
+      toast.error("Failed to update profile", { id: savingToast });
     }
 
-    setIsLoading(false);
+    setIsSaving(false);
   };
 
   if (isLoading && !profile.name) {
@@ -236,7 +425,11 @@ const Profile = () => {
       <div className="profile-header">
         <h1>User Profile</h1>
         {!isEditing ? (
-          <button className="edit-button" onClick={startEditing}>
+          <button
+            className="edit-button"
+            onClick={startEditing}
+            aria-label="Edit profile"
+          >
             <FaUserEdit /> Edit Profile
           </button>
         ) : (
@@ -244,27 +437,71 @@ const Profile = () => {
             <button
               className="save-button"
               onClick={saveProfile}
-              disabled={isLoading}
+              disabled={isSaving || !hasChanges}
+              aria-label="Save profile changes"
             >
-              <FaSave /> {isLoading ? "Saving..." : "Save Changes"}
+              <FaSave /> {isSaving ? "Saving..." : "Save Changes"}
             </button>
-            <button className="cancel-button" onClick={cancelEditing}>
+            <button
+              className="cancel-button"
+              onClick={cancelEditing}
+              aria-label="Cancel editing"
+            >
               <FaTimes /> Cancel
             </button>
           </div>
         )}
       </div>
 
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
+      {error && (
+        <div className="error-message" role="alert">
+          <FaExclamationTriangle /> {error}
+        </div>
+      )}
+      {success && (
+        <div className="success-message" role="status">
+          {success}
+        </div>
+      )}
+
+      {/* Unsaved changes warning */}
+      {showUnsavedWarning && (
+        <div className="unsaved-warning">
+          <FaExclamationTriangle />
+          <p>
+            You have unsaved changes. Are you sure you want to discard them?
+          </p>
+          <div className="warning-actions">
+            <button onClick={resetForm} className="discard-button">
+              Discard Changes
+            </button>
+            <button
+              onClick={() => setShowUnsavedWarning(false)}
+              className="continue-button"
+            >
+              Continue Editing
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="profile-content">
         <div className="profile-sidebar">
           <div className="profile-image-container">
             {isEditing ? (
               <>
-                <div className="profile-image edit-mode">
-                  <img src={formData.profileImage} alt="Profile" />
+                <div
+                  className="profile-image edit-mode"
+                  onClick={handleImageClick}
+                  tabIndex={0}
+                  role="button"
+                  aria-label="Click to change profile image"
+                  onKeyDown={(e) => e.key === "Enter" && handleImageClick()}
+                >
+                  <img
+                    src={formData.profileImage || "/default-avatar.png"}
+                    alt="Profile"
+                  />
                   <label
                     htmlFor="profile-image-upload"
                     className="image-upload-label"
@@ -276,13 +513,18 @@ const Profile = () => {
                     id="profile-image-upload"
                     className="image-upload-input"
                     onChange={handleImageChange}
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    ref={fileInputRef}
                   />
                 </div>
+                <div className="image-upload-hint">Click image to change</div>
               </>
             ) : (
               <div className="profile-image">
-                <img src={profile.profileImage} alt="Profile" />
+                <img
+                  src={profile.profileImage || "/default-avatar.png"}
+                  alt="Profile"
+                />
               </div>
             )}
 
@@ -294,6 +536,10 @@ const Profile = () => {
                   value={formData.name}
                   onChange={handleChange}
                   className="name-edit-input"
+                  maxLength={50}
+                  aria-label="Display name"
+                  placeholder="Your name"
+                  required
                 />
               ) : (
                 <h2>{profile.name}</h2>
@@ -312,16 +558,52 @@ const Profile = () => {
           <div className="profile-bio">
             <h3>Bio</h3>
             {isEditing ? (
-              <textarea
-                name="bio"
-                value={formData.bio}
-                onChange={handleChange}
-                rows="5"
-                placeholder="Tell us about yourself"
-              />
+              <>
+                <textarea
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  rows="5"
+                  placeholder="Tell us about yourself"
+                  maxLength={500}
+                  aria-label="User bio"
+                />
+                <div className="bio-char-count">
+                  {formData.bio.length}/500 characters
+                </div>
+              </>
             ) : (
-              <p>{profile.bio}</p>
+              <p>{profile.bio || "No bio provided yet."}</p>
             )}
+          </div>
+
+          {/* User metrics section */}
+          <div className="profile-metrics">
+            <h3>Your Activity</h3>
+            <div className="metrics-grid">
+              <div className="metric-item">
+                <FaCode className="metric-icon" />
+                <div className="metric-value">{metrics.linesOfCode || 0}</div>
+                <div className="metric-label">Lines of Code</div>
+              </div>
+              <div className="metric-item">
+                <FaClock className="metric-icon" />
+                <div className="metric-value">{metrics.hoursSpent || 0}</div>
+                <div className="metric-label">Hours Spent</div>
+              </div>
+              <div className="metric-item">
+                <FaUsers className="metric-icon" />
+                <div className="metric-value">{metrics.totalSessions || 0}</div>
+                <div className="metric-label">Sessions</div>
+              </div>
+              <div className="metric-item">
+                <FaUserFriends className="metric-icon" />
+                <div className="metric-value">
+                  {metrics.collaborations || 0}
+                </div>
+                <div className="metric-label">Collaborations</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -340,7 +622,12 @@ const Profile = () => {
                 ))}
               </ul>
             ) : (
-              <p className="empty-list">No projects yet</p>
+              <div className="empty-list">
+                <p>No projects yet</p>
+                <button className="create-new-button">
+                  <FaPlus /> Create New Project
+                </button>
+              </div>
             )}
           </div>
 
@@ -356,7 +643,12 @@ const Profile = () => {
                 ))}
               </ul>
             ) : (
-              <p className="empty-list">No recent sessions</p>
+              <div className="empty-list">
+                <p>No recent sessions</p>
+                <button className="create-new-button">
+                  <FaPlus /> Start New Session
+                </button>
+              </div>
             )}
           </div>
         </div>
