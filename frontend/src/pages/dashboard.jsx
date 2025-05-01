@@ -26,6 +26,7 @@ const CreateSessionModal = ({ isQuickStart, onClose, onSubmit }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [language, setLanguage] = useState("javascript");
+  const [isPublic, setIsPublic] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,6 +34,7 @@ const CreateSessionModal = ({ isQuickStart, onClose, onSubmit }) => {
       title,
       description,
       language,
+      isPublic,
     });
   };
 
@@ -75,6 +77,17 @@ const CreateSessionModal = ({ isQuickStart, onClose, onSubmit }) => {
               <option value="csharp">C#</option>
               <option value="cpp">C++</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="checkbox-labels" htmlFor="isPublic">
+              <input
+                type="checkbox"
+                id="isPublic"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+              />
+              Make this session public
+            </label>
           </div>
           <div className="modal-actions">
             <button
