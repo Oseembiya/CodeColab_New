@@ -6,7 +6,7 @@ const authenticateUser = async (req, res, next) => {
     // Get authorization header
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         status: "error",
         message: "Unauthorized: No token provided",
