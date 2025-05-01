@@ -191,6 +191,8 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
   const [isPublic, setIsPublic] = useState(true);
   const [sessionCreated, setSessionCreated] = useState(false);
   const [sessionCode, setSessionCode] = useState("");
+  const [sessionId, setSessionId] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -199,8 +201,9 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
       description,
       language,
       isPublic,
-      onSessionCreated: (code) => {
+      onSessionCreated: (code, id) => {
         setSessionCode(code);
+        setSessionId(id);
         setSessionCreated(true);
       },
     });
@@ -299,7 +302,13 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
             )}
 
             <div className="modal-actions">
-              <button className="button" onClick={onClose}>
+              <button
+                className="button"
+                onClick={() => {
+                  onClose();
+                  navigate(`/session/${sessionId}`);
+                }}
+              >
                 Continue to Session
               </button>
             </div>
@@ -519,9 +528,9 @@ const LiveSessions = () => {
           sessionDetails.status === "success" &&
           sessionDetails.data.sessionCode
         ) {
-          // Call the callback with the session code
+          // Call the callback with the session code and ID
           if (onSessionCreated) {
-            onSessionCreated(sessionDetails.data.sessionCode);
+            onSessionCreated(sessionDetails.data.sessionCode, sessionId);
             return; // Don't navigate yet - let the user see the code
           }
         }
