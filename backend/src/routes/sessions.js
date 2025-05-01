@@ -509,4 +509,47 @@ router.get("/code/:code", async (req, res) => {
   }
 });
 
+// End a session (mark as inactive)
+router.post("/:id/end", authenticateUser, async (req, res) => {
+  try {
+    const sessionRef = sessionsCollection.doc(req.params.id);
+    const sessionDoc = await sessionRef.get();
+
+    if (!sessionDoc.exists) {
+      return res.status(404).json({
+        status: "error",
+        message: "Session not found",
+      });
+    }
+
+    const sessionData = sessionDoc.data();
+
+    // Check if user is the creator
+    if (sessionData.createdBy !== req.user.uid) {
+      return res.status(403).json({
+        status: "error",
+        message: "Access denied: Only the session creator can end it",
+      });
+    }
+
+    // Update session status
+    await sessionRef.update({
+      isActive: false,
+      status: "ended",
+      updatedAt: new Date(),
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Session ended successfully",
+    });
+  } catch (error) {
+    console.error("Error ending session:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to end session",
+    });
+  }
+});
+
 module.exports = router;

@@ -394,9 +394,32 @@ const LiveSessions = () => {
     handleRefresh();
 
     // Listen for session-ended events
-    const handleSessionEnded = () => {
-      // Refresh the sessions list when a session is ended
-      handleRefresh();
+    const handleSessionEnded = (event) => {
+      const { sessionId } = event.detail;
+      console.log(`Session ended event received for session: ${sessionId}`);
+
+      // Update sessions in state immediately without a full refresh
+      setAllFilteredSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === sessionId
+            ? { ...session, status: "ended", isActive: false }
+            : session
+        )
+      );
+
+      // Also update filtered sessions
+      setFilteredSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === sessionId
+            ? { ...session, status: "ended", isActive: false }
+            : session
+        )
+      );
+
+      // Still refresh from server after a short delay to ensure we have latest data
+      setTimeout(() => {
+        handleRefresh();
+      }, 2000);
     };
 
     // Add event listener

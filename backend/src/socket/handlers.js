@@ -284,6 +284,16 @@ const setupSocketHandlers = (io) => {
           return;
         }
 
+        // Update the session in the database
+        await sessionRef.update({
+          isActive: false,
+          status: "ended",
+          updatedAt: new Date(),
+        });
+        console.log(
+          `Updated session ${sessionId} status to ended in the database`
+        );
+
         // Count how many clients will receive this notification
         const room = io.sockets.adapter.rooms.get(sessionId);
         const clientCount = room ? room.size : 0;

@@ -515,6 +515,32 @@ const Whiteboard = () => {
 
   // Exit collaboration mode and switch to standalone mode
   const handleExitCollaboration = () => {
+    const isOwner =
+      currentSession &&
+      currentUser &&
+      currentSession.createdBy === currentUser.uid;
+
+    // Check if the user is the session owner
+    if (isOwner && sessionId !== "new") {
+      console.log("Owner is exiting whiteboard session, marking as ended");
+
+      // If socket is connected, emit session-ended event
+      if (socket && connected) {
+        console.log("Emitting session-ended event from whiteboard");
+        socket.emit("end-session", {
+          sessionId,
+          userId: currentUser?.uid,
+        });
+
+        // Also dispatch a DOM event for LiveSessions page to listen to
+        window.dispatchEvent(
+          new CustomEvent("session-ended", {
+            detail: { sessionId },
+          })
+        );
+      }
+    }
+
     if (socket && connected) {
       // Notify server that user is intentionally leaving the session
       console.log(`Emitting leave-session for session ${sessionId}`);
