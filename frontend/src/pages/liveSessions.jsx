@@ -24,7 +24,7 @@ const LANGUAGE_OPTIONS = [
   "Python",
   "Java",
   "C#",
-  "HTML/CSS",
+  "C++",
 ];
 const TIME_OPTIONS = ["All Time", "Last Hour", "Today", "This Week"];
 const SESSION_TYPE_OPTIONS = [
@@ -250,7 +250,7 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
                   <option value="python">Python</option>
                   <option value="java">Java</option>
                   <option value="csharp">C#</option>
-                  <option value="html/css">HTML/CSS</option>
+                  <option value="C++">C++</option>
                 </select>
               </div>
               <div className="form-group">
@@ -387,6 +387,26 @@ const LiveSessions = () => {
       setFilteredSessions(combined);
     }
   }, [userSessions, allSessions, userSessionsLoading, allSessionsLoading]);
+
+  // When the component mounts, refresh the sessions list
+  useEffect(() => {
+    // Refresh sessions list when the component mounts
+    handleRefresh();
+
+    // Listen for session-ended events
+    const handleSessionEnded = () => {
+      // Refresh the sessions list when a session is ended
+      handleRefresh();
+    };
+
+    // Add event listener
+    window.addEventListener("session-ended", handleSessionEnded);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("session-ended", handleSessionEnded);
+    };
+  }, []);
 
   // Apply filters when any filter changes
   useEffect(() => {

@@ -319,6 +319,59 @@ export const SessionProvider = ({ children }) => {
     return sessionId === "new";
   };
 
+  // Check if the current user is the session owner
+  const isSessionOwner = (sessionId) => {
+    if (!currentUser || !sessionId || sessionId === "new") return false;
+
+    // Find the session in our sessions list
+    const session = sessions.find((s) => s.id === sessionId);
+    return session && session.createdBy === currentUser.uid;
+  };
+
+  // End a session (mark as inactive)
+  const endSession = async (sessionId) => {
+    if (!currentUser || !sessionId || sessionId === "new") return false;
+
+    try {
+      const token = await currentUser.getIdToken();
+      const apiUrl = `${baseUrl}/api/sessions/${sessionId}/end`.replace(
+        /\/\/api/,
+        "/api"
+      );
+
+      const response = await axios.post(
+        apiUrl,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.status === "success") {
+        // Update local session data
+        setSessions((prevSessions) =>
+          prevSessions.map((s) =>
+            s.id === sessionId ? { ...s, status: "ended", isActive: false } : s
+          )
+        );
+
+        setPublicSessions((prevSessions) =>
+          prevSessions.map((s) =>
+            s.id === sessionId ? { ...s, status: "ended", isActive: false } : s
+          )
+        );
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error ending session:", error);
+      return false;
+    }
+  };
+
   const value = {
     sessions,
     publicSessions, // Now contains all sessions, not just public ones
@@ -331,6 +384,8 @@ export const SessionProvider = ({ children }) => {
     refreshSessions,
     refreshAllSessions,
     isStandaloneMode,
+    isSessionOwner,
+    endSession,
     // Add the new code state functions
     updateSessionCode,
     getSessionCode,

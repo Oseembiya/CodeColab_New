@@ -108,7 +108,6 @@
 }
 
 .form-group label {
-  display: block;
   margin-bottom: var(--spacing-xs);
   font-weight: 500;
   color: var(--text-color);

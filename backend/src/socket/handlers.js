@@ -255,6 +255,66 @@ const setupSocketHandlers = (io) => {
       }
     });
 
+    // Handle end-session event - sent by the owner to notify all participants
+    socket.on("end-session", async (data) => {
+      try {
+        const { sessionId, userId } = data;
+
+        if (!sessionId) {
+          socket.emit("error", { message: "Session ID is required" });
+          return;
+        }
+
+        console.log(`User ${userId} requesting to end session ${sessionId}`);
+
+        // Verify if the user is the session owner
+        const sessionRef = db.collection("sessions").doc(sessionId);
+        const sessionDoc = await sessionRef.get();
+
+        if (!sessionDoc.exists) {
+          socket.emit("error", { message: "Session not found" });
+          return;
+        }
+
+        const sessionData = sessionDoc.data();
+        if (sessionData.createdBy !== userId) {
+          socket.emit("error", {
+            message: "Only the session owner can end the session",
+          });
+          return;
+        }
+
+        // Count how many clients will receive this notification
+        const room = io.sockets.adapter.rooms.get(sessionId);
+        const clientCount = room ? room.size : 0;
+        console.log(
+          `Broadcasting session-ended event to ${clientCount} clients in room ${sessionId}`
+        );
+
+        // Notify all users in the session that it has ended
+        io.to(sessionId).emit("session-ended", {
+          sessionId,
+          message: "The session owner has ended this session",
+          endedBy: userId,
+        });
+
+        // Also log all socket IDs who should receive this
+        if (room) {
+          const socketIds = Array.from(room);
+          console.log(
+            `Socket IDs in room ${sessionId}: ${socketIds.join(", ")}`
+          );
+        }
+
+        console.log(
+          `Session ${sessionId} has been ended by ${userId}, notified all participants`
+        );
+      } catch (error) {
+        console.error("Error ending session:", error);
+        socket.emit("error", { message: "Failed to end session" });
+      }
+    });
+
     // Handle join-session event
     socket.on("join-session", (sessionId) => {
       if (!sessionId) {
@@ -849,6 +909,35 @@ const setupSocketHandlers = (io) => {
 
       // Broadcast to everyone in the session except the sender
       socket.to(data.sessionId).emit("request-peer-connections", data);
+    });
+
+    // Handle force-exit-session (direct notification from owner to participants)
+    socket.on("force-exit-session", (data) => {
+      try {
+        const { sessionId, message, endedBy } = data;
+
+        if (!sessionId) {
+          socket.emit("error", { message: "Session ID is required" });
+          return;
+        }
+
+        console.log(
+          `User ${endedBy} forcing participants to exit session ${sessionId}`
+        );
+
+        // Broadcast to all users in the session except the sender
+        socket.to(sessionId).emit("force-exit-session", {
+          sessionId,
+          message: message || "Session has been ended by the owner",
+          endedBy,
+        });
+
+        console.log(
+          `Force-exit-session event broadcast to session ${sessionId}`
+        );
+      } catch (error) {
+        console.error("Error broadcasting force-exit-session:", error);
+      }
     });
   });
 
