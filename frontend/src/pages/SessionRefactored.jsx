@@ -35,6 +35,8 @@ const SessionRefactored = () => {
     leaveSession,
     updateSessionCode,
     getSessionCode,
+    endSession,
+    isSessionOwner,
   } = useSession();
   const { socket, connected, authenticate } = useSocket();
   const { incrementMetrics } = useUserMetrics();
@@ -366,6 +368,33 @@ const SessionRefactored = () => {
 
   // Exit collaboration mode and switch to standalone mode
   const handleExitCollaboration = () => {
+    const isOwner = isSessionOwner(sessionId);
+
+    // Check if the user is the session owner
+    if (isOwner && sessionId !== "new") {
+      console.log("Owner is exiting session, marking as ended");
+
+      // Try to end the session in the database even if the endpoint is missing
+      // This at least updates the local state in SessionContext
+      endSession(sessionId);
+
+      // If socket is connected, emit session-ended event
+      if (socket && connected) {
+        console.log("Emitting session-ended event");
+        socket.emit("session-ended", {
+          sessionId,
+          userId: currentUser?.uid,
+        });
+
+        // Also dispatch a DOM event for LiveSessions page to listen to
+        window.dispatchEvent(
+          new CustomEvent("session-ended", {
+            detail: { sessionId },
+          })
+        );
+      }
+    }
+
     if (socket && connected) {
       // Notify server that user is intentionally leaving the session
       socket.emit("leave-session", {
