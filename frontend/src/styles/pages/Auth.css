@@ -354,6 +354,14 @@
   background-color: rgba(40, 167, 69, 0.1);
   color: #28a745;
   border-left: 3px solid #28a745;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: var(--spacing-sm) 0;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  animation: fadeIn 0.3s ease;
 }
 
 /* Login options */

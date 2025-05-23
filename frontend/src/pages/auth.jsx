@@ -119,9 +119,14 @@ const Auth = () => {
         "" // No bio
       );
 
-      setIsLoading(false);
       setSuccess("Account created successfully! You can now log in.");
-      setActiveTab("login");
+      setIsLoading(false);
+
+      // Show success message for 3 seconds before switching tabs
+      setTimeout(() => {
+        setSuccess(""); // Clear success message
+        setActiveTab("login");
+      }, 3000);
     } catch (err) {
       setError(err.message || "Failed to register");
       setIsLoading(false);
