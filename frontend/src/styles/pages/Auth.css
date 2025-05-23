@@ -513,6 +513,12 @@
   margin-bottom: var(--spacing-md);
 }
 
+.form-group label {
+  display: block;
+  margin-bottom: 0.9rem;
+  color: var(--text-color);
+}
+
 /* Remove the positioning for left icons */
 .form-group label svg {
   display: none; /* Hide icons in labels */
