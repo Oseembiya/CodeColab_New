@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
 import Editor from "@monaco-editor/react";
 import {
   FaCode,
@@ -38,11 +37,13 @@ import "../styles/pages/Session.css";
 // Standalone Editor Component - No session management
 const StandaloneEditor = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const [code, setCode] = useState("// Start coding here\n\n");
+  const [code, setCode] = useState(() => {
+    const savedCode = localStorage.getItem("standaloneEditorCode");
+    return savedCode || "// Start coding here\n\n";
+  });
   const [language, setLanguage] = useState("javascript");
   const [theme, setTheme] = useState("vs-dark");
   const [output, setOutput] = useState("");
@@ -60,9 +61,12 @@ const StandaloneEditor = () => {
 
   // Initialize editor
   useEffect(() => {
-    // Set up basic editor defaults
-    setCode("// Start coding here\n\n");
-    setLanguage("javascript");
+    // Load saved settings from localStorage
+    const savedLanguage = localStorage.getItem("standaloneEditorLanguage");
+    const savedTheme = localStorage.getItem("standaloneEditorTheme");
+
+    if (savedLanguage) setLanguage(savedLanguage);
+    if (savedTheme) setTheme(savedTheme);
   }, []);
 
   // Handle editor mounting
@@ -73,12 +77,21 @@ const StandaloneEditor = () => {
   // Handle code changes
   const handleCodeChange = (value) => {
     setCode(value);
+    localStorage.setItem("standaloneEditorCode", value);
   };
 
   // Handle language change
   const handleLanguageChange = (e) => {
     const newLanguage = e.target.value;
     setLanguage(newLanguage);
+    localStorage.setItem("standaloneEditorLanguage", newLanguage);
+  };
+
+  // Handle theme change
+  const handleToggleTheme = () => {
+    const newTheme = theme === "vs-dark" ? "vs" : "vs-dark";
+    setTheme(newTheme);
+    localStorage.setItem("standaloneEditorTheme", newTheme);
   };
 
   // Run code simulation
@@ -225,10 +238,6 @@ const StandaloneEditor = () => {
     setFontSize(newSize);
   };
 
-  const handleToggleTheme = () => {
-    setTheme(theme === "vs-dark" ? "vs" : "vs-dark");
-  };
-
   const handleUploadCode = () => {
     fileInputRef.current.click();
   };
@@ -270,6 +279,7 @@ const StandaloneEditor = () => {
   const handleClearEditor = () => {
     if (window.confirm("Are you sure you want to clear the editor?")) {
       setCode("// Start coding here\n\n");
+      localStorage.removeItem("standaloneEditorCode");
     }
   };
 
