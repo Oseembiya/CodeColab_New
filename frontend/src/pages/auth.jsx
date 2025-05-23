@@ -156,7 +156,7 @@ const Auth = () => {
   return (
     <div className="auth-container">
       <div className="welcome-banner">
-        <h1>Welcome to CodeColab</h1>
+        <h1>CodeColab</h1>
         <p>Real-time collaborative coding platform</p>
       </div>
       <div className="auth-card">
