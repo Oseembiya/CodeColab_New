@@ -225,7 +225,7 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter a title for your session"
                   required
-                  maxLength={24}
+                  maxLength={20}
                 />
               </div>
               <div className="form-group">
@@ -236,7 +236,7 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief description of the session"
-                  maxLength={24}
+                  maxLength={40}
                 />
               </div>
               <div className="form-group">
