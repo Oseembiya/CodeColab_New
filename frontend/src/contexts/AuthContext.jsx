@@ -104,15 +104,12 @@ export const AuthProvider = ({ children }) => {
 
       // First check if this email exists but with a different sign-in method
       try {
-        console.log("Checking sign-in methods for:", email);
         const methods = await fetchSignInMethodsForEmail(auth, email).catch(
           (e) => {
             console.log("Error fetching sign-in methods:", e);
             return [];
           }
         );
-
-        console.log("Available sign-in methods:", methods);
 
         // If the user has accounts but NOT with password
         if (methods && methods.length > 0 && !methods.includes("password")) {
@@ -132,7 +129,7 @@ export const AuthProvider = ({ children }) => {
           return null;
         }
       } catch (methodErr) {
-        console.log("Error in sign-in method check:", methodErr);
+        setError("Failed to login again", methodErr);
         // Continue with normal login attempt
       }
 
@@ -247,7 +244,6 @@ export const AuthProvider = ({ children }) => {
   const loginWithGithub = async () => {
     try {
       setError("");
-      console.log("Starting GitHub authentication");
 
       // Configure GitHub provider to request proper scopes
       githubProvider.setCustomParameters({
@@ -257,14 +253,12 @@ export const AuthProvider = ({ children }) => {
       });
 
       const result = await signInWithPopup(auth, githubProvider);
-      console.log("GitHub auth successful, checking user document");
 
       // Check if this is a new user
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
 
       if (!userDoc.exists()) {
-        console.log("Creating new user document for GitHub user");
-        // Create user document in Firestore for new users
+        // Create user document in Fire store for new users
         await setDoc(doc(db, "users", result.user.uid), {
           displayName:
             result.user.displayName || result.user.email.split("@")[0],
@@ -285,8 +279,6 @@ export const AuthProvider = ({ children }) => {
           sessionHistory: [],
         });
       }
-
-      console.log("GitHub authentication complete");
       return result.user;
     } catch (err) {
       console.error("GitHub auth error:", err.code, err.message);
@@ -300,7 +292,6 @@ export const AuthProvider = ({ children }) => {
         setError("Sign-in was cancelled. Please try again.");
       } else if (err.code === "auth/cancelled-popup-request") {
         // This is normal when multiple popups are attempted, don't show error
-        console.log("Popup request cancelled (normal when retrying)");
       } else if (err.code === "auth/popup-blocked") {
         setError(
           "Sign-in popup was blocked by your browser. Please enable popups for this site."

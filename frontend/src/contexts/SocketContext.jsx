@@ -51,13 +51,7 @@ export const SocketProvider = ({ children }) => {
         : import.meta.env.VITE_PRODUCTION_API_URL ||
           "https://codecolab-852p.onrender.com";
 
-    if (!sharedSocketInstance) {
-      console.log(
-        `Socket.IO connection attempt ${connectionAttempts + 1} to ${serverUrl}`
-      );
-    }
-
-    // Create socket connection - ONLY use polling to avoid WebSocket issues
+    // Create socket connection  using only polling to avoid WebSocket issues
     const socketInstance =
       sharedSocketInstance ||
       io(serverUrl, {
@@ -77,7 +71,6 @@ export const SocketProvider = ({ children }) => {
 
     // Set up event listeners
     const handleConnect = () => {
-      console.log("Socket connected:", socketInstance.id);
       setConnected(true);
       setConnectionAttempts(0);
       authenticatedRef.current = false;
@@ -85,20 +78,17 @@ export const SocketProvider = ({ children }) => {
     };
 
     const handleDisconnect = () => {
-      console.log("Socket disconnected");
       setConnected(false);
       initializingRef.current = false;
     };
 
     const handleError = (error) => {
-      console.error("Socket connection error:", error);
       setConnected(false);
       setConnectionAttempts((prev) => prev + 1);
       initializingRef.current = false;
     };
 
     const handleJoinedSession = () => {
-      console.log("Successfully joined session, marking as authenticated");
       authenticatedRef.current = true;
     };
 
@@ -128,7 +118,7 @@ export const SocketProvider = ({ children }) => {
   // Authenticate with server
   const authenticate = (data) => {
     if (!socket || !connected || authenticatedRef.current) return;
-    console.log("Emitting authenticate event");
+
     socket.emit("authenticate", data);
   };
 
@@ -138,7 +128,7 @@ export const SocketProvider = ({ children }) => {
   // Request users list
   const requestUsersList = (sessionId) => {
     if (!socket || !connected) return false;
-    console.log("Requesting users list for session:", sessionId);
+
     socket.emit("get-users", { sessionId });
     return true;
   };

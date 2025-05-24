@@ -123,8 +123,6 @@ export const UserMetricsProvider = ({ children }) => {
   const incrementMetrics = async (increments) => {
     if (!currentUser) return;
 
-    console.log("Incrementing metrics:", increments);
-
     try {
       const token = await currentUser.getIdToken();
       const apiUrl = `${baseUrl}/api/metrics/increment`.replace(
@@ -143,7 +141,6 @@ export const UserMetricsProvider = ({ children }) => {
       );
 
       if (response.data.status === "success") {
-        console.log("Metrics incremented successfully:", response.data.data);
         setMetrics(response.data.data);
       }
     } catch (error) {

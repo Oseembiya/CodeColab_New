@@ -204,6 +204,7 @@
 @media (max-width: 480px) {
   .auth-container {
     padding: var(--spacing-sm);
+    gap: 0rem;
   }
 
   .auth-header h1 {
@@ -278,12 +279,11 @@
   background: none;
   border: none;
   color: var(--text-color);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  text-transform: uppercase;
   letter-spacing: 1px;
 }
 
@@ -486,7 +486,6 @@
 }
 
 /* Provider suggestion for errors */
-.provider-suggestion,
 .password-recovery-help {
   margin-top: var(--spacing-sm);
   font-size: 0.85rem;

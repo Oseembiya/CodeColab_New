@@ -229,12 +229,10 @@ export const SessionProvider = ({ children }) => {
             metrics &&
             metrics.incrementMetrics
           ) {
-            console.log("Incrementing collaborations metric");
             metrics.incrementMetrics({ collaborations: 1 });
 
             // Notify session owner about the collaboration via socket
             if (socket && response.data.data.createdBy) {
-              console.log("Emitting collaboration-joined event");
               socket.emit("collaboration-joined", {
                 sessionId,
                 ownerId: response.data.data.createdBy,

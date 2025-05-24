@@ -174,51 +174,19 @@ const Auth = () => {
             Create Account
           </button>
         </div>
-
         {error && (
           <div className="error-message">
             {error}
-            {error.includes("sign in with Google") && (
-              <div className="provider-suggestion">
-                <button
-                  type="button"
-                  className="social-button google"
-                  onClick={() => handleSocialAuth("Google")}
-                >
-                  <FaGoogle /> Sign in with Google
-                </button>
-              </div>
-            )}
-            {error.includes("sign in with GitHub") && (
-              <div className="provider-suggestion">
-                <button
-                  type="button"
-                  className="social-button github"
-                  onClick={() => handleSocialAuth("GitHub")}
-                >
-                  <FaGithub /> Sign in with GitHub
-                </button>
-              </div>
-            )}
             {error.includes("Invalid email or password") && (
               <div className="password-recovery-help">
                 <Link to="/reset-password" className="forgot-password-link">
                   Reset your password
                 </Link>
-                <span className="or-divider">or</span>
-                <button
-                  type="button"
-                  className="google-signin-help"
-                  onClick={() => handleSocialAuth("Google")}
-                >
-                  <FaGoogle /> Try with Google
-                </button>
               </div>
             )}
           </div>
         )}
         {success && <div className="success-message">{success}</div>}
-
         {activeTab === "login" ? (
           // Login Form
           <form onSubmit={handleLogin} className="auth-form">
@@ -230,9 +198,9 @@ const Auth = () => {
                 name="email"
                 value={loginData.email}
                 onChange={handleLoginChange}
-                placeholder="Enter your email"
                 required
                 autoComplete="username"
+                placeholder="Your email"
               />
               <span className="input-icon">
                 <FaEnvelope />
@@ -247,9 +215,10 @@ const Auth = () => {
                 name="password"
                 value={loginData.password}
                 onChange={handleLoginChange}
-                placeholder="Enter your password"
                 required
                 autoComplete="current-password"
+                placeholder="************"
+                maxLength={12}
               />
               <button
                 type="button"
@@ -287,14 +256,14 @@ const Auth = () => {
           // Register Form
           <form onSubmit={handleRegister} className="auth-form">
             <div className="form-group">
-              <label htmlFor="registerName">Full Name</label>
+              <label htmlFor="registerName">Name</label>
               <input
                 type="text"
                 id="registerName"
                 name="name"
                 value={registerData.name}
                 onChange={handleRegisterChange}
-                placeholder="Enter your full name"
+                placeholder="Kevin Collide"
                 required
               />
               <span className="input-icon">
@@ -310,7 +279,7 @@ const Auth = () => {
                 name="email"
                 value={registerData.email}
                 onChange={handleRegisterChange}
-                placeholder="Enter your email"
+                placeholder="kevincollide@gmail.com"
                 required
                 autoComplete="email"
               />
@@ -327,9 +296,10 @@ const Auth = () => {
                 name="password"
                 value={registerData.password}
                 onChange={handleRegisterChange}
-                placeholder="Create a password"
+                placeholder="**********"
                 required
                 autoComplete="new-password"
+                maxLength={12}
               />
               <button
                 type="button"
@@ -344,16 +314,17 @@ const Auth = () => {
             </div>
 
             <div className="form-group password-field">
-              <label htmlFor="registerConfirmPassword">Confirm Password</label>
+              <label htmlFor="registerConfirmPassword">Confirm password</label>
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 id="registerConfirmPassword"
                 name="confirmPassword"
                 value={registerData.confirmPassword}
                 onChange={handleRegisterChange}
-                placeholder="Confirm your password"
+                placeholder="**********"
                 required
                 autoComplete="new-password"
+                maxLength={12}
               />
               <button
                 type="button"
