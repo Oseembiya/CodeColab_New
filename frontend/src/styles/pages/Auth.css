@@ -405,7 +405,6 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  text-transform: uppercase;
   letter-spacing: 1px;
 }
 
@@ -632,7 +631,7 @@
 @media (max-width: 425px) {
   .login-options {
     justify-content: flex-start;
-    width: 100%;
+    width: 80%;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-sm);
