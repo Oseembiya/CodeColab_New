@@ -14,7 +14,6 @@ import Whiteboard from "./pages/whiteboard";
 import StandaloneEditor from "./pages/standaloneEditor";
 import StandaloneWhiteboard from "./pages/standaloneWhiteboard";
 import LiveSessions from "./pages/liveSessions";
-import "./styles/App.css";
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
