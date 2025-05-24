@@ -321,7 +321,7 @@
 }
 
 .welcome-banner p {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--text-color-secondary);
   opacity: 0.8;
 }
