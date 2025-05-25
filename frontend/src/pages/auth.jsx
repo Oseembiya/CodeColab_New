@@ -348,13 +348,13 @@ const Auth = () => {
             )}
 
             <button type="submit" className="auth-button" disabled={isLoading}>
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? "Creating Account..." : "Get Started"}
             </button>
           </form>
         )}
 
         <div className="social-auth">
-          <p>Or continue with</p>
+          <p>Or</p>
           <div className="social-buttons">
             <button
               type="button"
