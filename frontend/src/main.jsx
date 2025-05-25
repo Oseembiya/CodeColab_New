@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 import App from "./App.jsx";
 import "./styles/index.css";
-import { AuthProvider } from "./contexts/AuthContext";
 
 // Wrap App component with the AuthProvider
 const AppWithAuth = () => (

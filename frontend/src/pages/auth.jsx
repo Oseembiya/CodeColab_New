@@ -16,7 +16,7 @@ import { useAuth } from "../contexts/AuthContext";
 import "../styles/pages/Auth.css";
 
 const Auth = () => {
-  const [activeTab, setActiveTab] = useState("login");
+  const [activeTab, setActiveTab] = useState("signup");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -29,7 +29,6 @@ const Auth = () => {
     password: "",
     rememberMe: false,
   });
-
   // Register form state
   const [registerData, setRegisterData] = useState({
     name: "",
@@ -43,25 +42,14 @@ const Auth = () => {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Handle login form input changes
-  const handleLoginChange = (e) => {
+  //  combine the handle for both login and register forms
+  const handleFormChange = (setter) => (e) => {
     const { name, value, type, checked } = e.target;
-    setLoginData((prevData) => ({
+    setter((prevData) => ({
       ...prevData,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-
-  // Handle register form input changes
-  const handleRegisterChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setRegisterData((prevData) => ({
-      ...prevData,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  // Handle profile image selection - removed as we'll get images from Google
 
   // Handle login submission
   const handleLogin = async (e) => {
@@ -122,11 +110,11 @@ const Auth = () => {
       setSuccess("Account created successfully! You can now log in.");
       setIsLoading(false);
 
-      // Show success message for 3 seconds before switching tabs
+      // Show success message for 2 seconds before switching tabs
       setTimeout(() => {
         setSuccess(""); // Clear success message
         setActiveTab("login");
-      }, 3000);
+      }, 2000);
     } catch (err) {
       setError(err.message || "Failed to register");
       setIsLoading(false);
@@ -197,7 +185,7 @@ const Auth = () => {
                 id="loginEmail"
                 name="email"
                 value={loginData.email}
-                onChange={handleLoginChange}
+                onChange={handleFormChange(setLoginData)}
                 required
                 autoComplete="username"
                 placeholder="Your email"
@@ -214,7 +202,7 @@ const Auth = () => {
                 id="loginPassword"
                 name="password"
                 value={loginData.password}
-                onChange={handleLoginChange}
+                onChange={handleFormChange(setLoginData)}
                 required
                 autoComplete="current-password"
                 placeholder="************"
@@ -239,7 +227,7 @@ const Auth = () => {
                   id="rememberMe"
                   name="rememberMe"
                   checked={loginData.rememberMe}
-                  onChange={handleLoginChange}
+                  onChange={handleFormChange(setLoginData)}
                 />
                 <label htmlFor="rememberMe">Remember me</label>
               </div>
@@ -262,7 +250,7 @@ const Auth = () => {
                 id="registerName"
                 name="name"
                 value={registerData.name}
-                onChange={handleRegisterChange}
+                onChange={handleFormChange(setRegisterData)}
                 placeholder="Kevin Collide"
                 required
               />
@@ -278,7 +266,7 @@ const Auth = () => {
                 id="registerEmail"
                 name="email"
                 value={registerData.email}
-                onChange={handleRegisterChange}
+                onChange={handleFormChange(setRegisterData)}
                 placeholder="kevincollide@gmail.com"
                 required
                 autoComplete="email"
@@ -295,11 +283,12 @@ const Auth = () => {
                 id="registerPassword"
                 name="password"
                 value={registerData.password}
-                onChange={handleRegisterChange}
+                onChange={handleFormChange(setRegisterData)}
                 placeholder="**********"
                 required
                 autoComplete="new-password"
                 maxLength={12}
+                aria-hidden="true"
               />
               <button
                 type="button"
@@ -320,7 +309,7 @@ const Auth = () => {
                 id="registerConfirmPassword"
                 name="confirmPassword"
                 value={registerData.confirmPassword}
-                onChange={handleRegisterChange}
+                onChange={handleFormChange(setRegisterData)}
                 placeholder="**********"
                 required
                 autoComplete="new-password"

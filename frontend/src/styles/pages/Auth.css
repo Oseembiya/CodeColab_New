@@ -458,7 +458,7 @@
 }
 
 .social-button.github {
-  background-color: #333;
+  background-color: var(--secondary-light);
   color: white;
 }
 
@@ -526,7 +526,7 @@
 .input-icon {
   position: absolute;
   right: 16px;
-  top: 60%;
+  top: 70%;
   transform: translateY(-50%);
   height: 100%;
   width: 20px;
@@ -557,7 +557,7 @@
 .password-toggle {
   position: absolute;
   right: 16px;
-  top: 60%;
+  top: 70%;
   transform: translateY(-50%);
   height: 100%;
   width: 20px;
