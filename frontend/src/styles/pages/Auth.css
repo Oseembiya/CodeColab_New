@@ -408,7 +408,6 @@
 }
 
 .auth-button:disabled {
-  opacity: 0.9;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
