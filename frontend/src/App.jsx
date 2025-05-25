@@ -25,6 +25,23 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Define protected routes configuration
+const protectedRoutes = [
+  { path: "/dashboard", element: <Dashboard /> },
+  { path: "/profile", element: <Profile /> },
+  { path: "/sessions", element: <LiveSessions /> },
+  { path: "/standalone-editor", element: <StandaloneEditor /> },
+  { path: "/standalone-whiteboard", element: <StandaloneWhiteboard /> },
+  { path: "/session/:sessionId", element: <Session /> },
+  { path: "/whiteboard/:sessionId", element: <Whiteboard /> },
+];
+
+// Define legacy redirects
+const legacyRedirects = [
+  { from: "/session/new", to: "/standalone-editor" },
+  { from: "/whiteboard/new", to: "/standalone-whiteboard" },
+];
+
 function App() {
   const [loading, setLoading] = useState(true);
   const [isSidebarFolded, setIsSidebarFolded] = useState(false);
@@ -95,98 +112,22 @@ function App() {
                 />
 
                 {/* Protected routes */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/sessions"
-                  element={
-                    <ProtectedRoute>
-                      <LiveSessions />
-                    </ProtectedRoute>
-                  }
-                />
+                {protectedRoutes.map(({ path, element }) => (
+                  <Route
+                    key={path}
+                    path={path}
+                    element={<ProtectedRoute>{element}</ProtectedRoute>}
+                  />
+                ))}
 
-                {/* Standalone Mode Routes */}
-                <Route
-                  path="/standalone-editor"
-                  element={
-                    <ProtectedRoute>
-                      <StandaloneEditor />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/standalone-whiteboard"
-                  element={
-                    <ProtectedRoute>
-                      <StandaloneWhiteboard />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Collaborative Mode Routes */}
-                <Route
-                  path="/session/:sessionId"
-                  element={
-                    <ProtectedRoute>
-                      <Session />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/whiteboard/:sessionId"
-                  element={
-                    <ProtectedRoute>
-                      <Whiteboard />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Redirect legacy routes */}
-                <Route
-                  path="/login"
-                  element={<Navigate to="/auth" replace />}
-                />
-                <Route
-                  path="/register"
-                  element={<Navigate to="/auth" replace />}
-                />
-
-                {/* Legacy standalone mode redirects */}
-                <Route
-                  path="/session/new"
-                  element={<Navigate to="/standalone-editor" replace />}
-                />
-                <Route
-                  path="/whiteboard/new"
-                  element={<Navigate to="/standalone-whiteboard" replace />}
-                />
-
-                {/* Catch all unknown routes and redirect */}
-                <Route
-                  path="*"
-                  element={
-                    currentUser ? (
-                      <Navigate to="/dashboard" replace />
-                    ) : (
-                      <Navigate to="/auth" replace />
-                    )
-                  }
-                />
+                {/* Legacy redirects */}
+                {legacyRedirects.map(({ from, to }) => (
+                  <Route
+                    key={from}
+                    path={from}
+                    element={<Navigate to={to} replace />}
+                  />
+                ))}
               </Routes>
             </div>
           </SessionProvider>

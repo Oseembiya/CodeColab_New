@@ -186,7 +186,7 @@
   }
 
   .auth-card {
-    max-width: 95%;
+    max-width: 350px;
     margin: 0 auto;
   }
 
@@ -327,7 +327,7 @@
 
 /* Auth form */
 .auth-form {
-  padding: var(--spacing-md);
+  padding: var(--spacing-lg);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
@@ -415,7 +415,7 @@
 
 /* Social authentication */
 .social-auth {
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-lg);
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -596,7 +596,7 @@
 /* Adjust auth card width for better tablet display */
 @media (min-width: 481px) and (max-width: 1024px) {
   .auth-card {
-    max-width: 400px;
+    max-width: 350px;
   }
 
   .welcome-banner h1 {
@@ -611,10 +611,10 @@
 /* Small screen adjustments */
 @media (max-width: 425px) {
   .login-options {
-    justify-content: flex-start;
-    width: 80%;
-    flex-direction: column;
+    justify-content: space-between;
+    flex-direction: row;
     align-items: flex-start;
+    margin-bottom: va(--spacing-xs);
     gap: var(--spacing-sm);
   }
 

@@ -167,8 +167,6 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = async () => {
     try {
       setError("");
-      console.log("Starting Google authentication");
-
       // Configure Google provider to request proper scopes if needed
       googleProvider.setCustomParameters({
         prompt: "select_account",
@@ -177,14 +175,12 @@ export const AuthProvider = ({ children }) => {
       });
 
       const result = await signInWithPopup(auth, googleProvider);
-      console.log("Google auth successful, checking user document");
 
       // Check if this is a new user
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
 
       if (!userDoc.exists()) {
-        console.log("Creating new user document for Google user");
-        // Create user document in Firestore for new users
+        // Create user document in Fire store for new users
         await setDoc(doc(db, "users", result.user.uid), {
           displayName:
             result.user.displayName || result.user.email.split("@")[0],

@@ -16,7 +16,7 @@ import { useAuth } from "../contexts/AuthContext";
 import "../styles/pages/Auth.css";
 
 const Auth = () => {
-  const [activeTab, setActiveTab] = useState("signup");
+  const [activeTab, setActiveTab] = useState("login");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
