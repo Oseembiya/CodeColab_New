@@ -157,11 +157,6 @@
 
 /* Media queries for responsiveness */
 @media (min-width: 992px) {
-  .app-container {
-    padding-left: 250px;
-    transition: padding-left 0.3s ease-in-out;
-  }
-
   .app-container.sidebar-folded {
     padding-left: 60px;
   }
