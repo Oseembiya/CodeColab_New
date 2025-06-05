@@ -9,7 +9,7 @@
   left: 0;
   height: 100vh;
   width: 250px;
-  background-color: var(--primary-color);
+  background-color: var(--background-color);
   box-shadow: var(--shadow-md);
   /* On mobile, initial state is transformed out of view */
   transform: translateX(-100%);
@@ -157,10 +157,6 @@
 
 /* Media queries for responsiveness */
 @media (min-width: 992px) {
-  .app-container {
-    padding-left: 250px;
-  }
-
   .app-container.sidebar-folded {
     padding-left: 60px;
   }
@@ -304,7 +300,6 @@
   margin-right: var(--spacing-md);
   font-size: var(--icon-size);
 }
-
 .sidebar.folded .logout-button {
   padding: var(--spacing-sm);
   justify-content: center;
