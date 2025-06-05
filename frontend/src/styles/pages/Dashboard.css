@@ -444,7 +444,7 @@ select {
   .benefits-grid,
   .use-cases-grid,
   .testimonials {
-    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
     gap: var(--spacing-md);
   }
 
@@ -459,7 +459,7 @@ select {
   }
 
   .dashboard-container {
-    padding: var(--spacing-md) var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-xl);
   }
 
   .intro-card {
