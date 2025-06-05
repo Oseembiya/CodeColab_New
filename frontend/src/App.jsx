@@ -45,6 +45,7 @@ const legacyRedirects = [
 function App() {
   const [loading, setLoading] = useState(true);
   const [isSidebarFolded, setIsSidebarFolded] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -61,6 +62,11 @@ function App() {
     setIsSidebarFolded(folded);
   };
 
+  // Function to update sidebar open state
+  const handleSidebarOpen = (open) => {
+    setIsSidebarOpen(open);
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -73,8 +79,8 @@ function App() {
   return (
     <div
       className={`app-container ${isSidebarFolded ? "sidebar-folded" : ""} ${
-        !currentUser ? "auth-only" : ""
-      }`}
+        !isSidebarOpen ? "sidebar-closed" : ""
+      } ${!currentUser ? "auth-only" : ""}`}
     >
       {/* Toast notifications */}
       <Toaster position="top-right" />
@@ -83,7 +89,12 @@ function App() {
         <UserMetricsProvider>
           <SessionProvider>
             {/* Only show sidebar for authenticated users */}
-            {currentUser && <Sidebar onFoldChange={handleSidebarFold} />}
+            {currentUser && (
+              <Sidebar
+                onFoldChange={handleSidebarFold}
+                onOpenChange={handleSidebarOpen}
+              />
+            )}
 
             <div className="main-content">
               <Routes>

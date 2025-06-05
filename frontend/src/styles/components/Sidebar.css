@@ -157,8 +157,13 @@
 
 /* Media queries for responsiveness */
 @media (min-width: 992px) {
+  .app-container {
+    padding-left: 250px; /* Default padding for open sidebar */
+    transition: padding-left 0.3s ease-in-out;
+  }
+
   .app-container.sidebar-folded {
-    padding-left: 60px;
+    padding-left: 60px; /* Reduced padding when folded */
   }
 
   .sidebar {
