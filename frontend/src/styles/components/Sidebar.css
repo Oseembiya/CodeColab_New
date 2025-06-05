@@ -144,6 +144,10 @@
     padding-left: 60px; /* Reduced padding when folded */
   }
 
+  .app-container.auth-only {
+    padding-left: 0; /* Remove padding when user is not authenticated */
+  }
+
   .sidebar {
     transform: translateX(0);
     transition: width 0.3s ease-in-out;
