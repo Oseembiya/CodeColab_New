@@ -100,7 +100,7 @@ const Whiteboard = () => {
       isDrawingMode: true,
       width: canvasRef.current.offsetWidth,
       height: canvasRef.current.offsetHeight,
-      backgroundColor: "#151618",
+      backgroundColor: "#000000",
       selection: true,
     });
 
@@ -334,7 +334,7 @@ const Whiteboard = () => {
             data.user?.id
           );
           fabricCanvasRef.current.clear();
-          fabricCanvasRef.current.setBackgroundColor("#151618", () => {
+          fabricCanvasRef.current.setBackgroundColor("#000000", () => {
             fabricCanvasRef.current.requestRenderAll();
           });
         }
@@ -359,7 +359,7 @@ const Whiteboard = () => {
 
           // Clear current canvas first
           fabricCanvasRef.current.clear();
-          fabricCanvasRef.current.setBackgroundColor("#151618", () => {
+          fabricCanvasRef.current.setBackgroundColor("#000000", () => {
             // Add all objects from the state
             fabric.util.enlivenObjects(data.objects, (objects) => {
               if (fabricCanvasRef.current && objects.length > 0) {
@@ -620,7 +620,7 @@ const Whiteboard = () => {
         break;
       case "eraser":
         canvas.isDrawingMode = true;
-        canvas.freeDrawingBrush.color = "#151618"; // Background color
+        canvas.freeDrawingBrush.color = "#000000"; // Background color
         canvas.freeDrawingBrush.width = brushWidth * 3;
         break;
       case "select":
@@ -717,7 +717,7 @@ const Whiteboard = () => {
   const confirmClearCanvas = () => {
     if (fabricCanvasRef.current) {
       fabricCanvasRef.current.clear();
-      fabricCanvasRef.current.setBackgroundColor("#151618", () => {
+      fabricCanvasRef.current.setBackgroundColor("#000000", () => {
         fabricCanvasRef.current.renderAll();
       });
 

@@ -51,7 +51,7 @@ const StandaloneWhiteboard = () => {
       isDrawingMode: true,
       width: canvasRef.current.offsetWidth,
       height: canvasRef.current.offsetHeight,
-      backgroundColor: "#151618",
+      backgroundColor: "#000000",
       selection: true,
       allowTouchScrolling: true,
     });
@@ -94,7 +94,7 @@ const StandaloneWhiteboard = () => {
         break;
       case "eraser":
         canvas.isDrawingMode = true;
-        canvas.freeDrawingBrush.color = "#151618"; // Background color
+        canvas.freeDrawingBrush.color = "#000000"; // Background color
         canvas.freeDrawingBrush.width = brushWidth * 3;
         break;
       case "select":
@@ -155,7 +155,7 @@ const StandaloneWhiteboard = () => {
   const confirmClearCanvas = () => {
     if (fabricCanvasRef.current) {
       fabricCanvasRef.current.clear();
-      fabricCanvasRef.current.setBackgroundColor("#151618", () => {
+      fabricCanvasRef.current.setBackgroundColor("#000000", () => {
         fabricCanvasRef.current.renderAll();
       });
       setShowConfirmModal(false);
