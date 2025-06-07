@@ -73,7 +73,7 @@
   color: var(--text-color);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  font-size: var(--text-md);
+  font-size: 1.1rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
