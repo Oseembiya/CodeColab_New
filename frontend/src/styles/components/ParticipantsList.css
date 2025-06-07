@@ -64,21 +64,20 @@
   font-weight: 500;
 }
 
-.status-indicator {
+.participant-status-indicator {
   position: absolute;
   bottom: 0;
   right: 0;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 2px solid var(--background-color);
 }
 
-.status-indicator.online {
+.participant-status-indicator.online {
   background-color: #4caf50;
 }
 
-.status-indicator.offline {
+.participant-status-indicator.offline {
   background-color: #ccc;
 }
 

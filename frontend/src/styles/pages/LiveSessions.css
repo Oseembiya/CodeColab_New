@@ -12,7 +12,7 @@
   margin-bottom: var(--spacing-lg);
   flex-wrap: wrap;
   gap: var(--spacing-md);
-  background-color: #1e2132;
+  border: 1px solid var(--line-color);
   border-radius: var(--radius-md);
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-md);

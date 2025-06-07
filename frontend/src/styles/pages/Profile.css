@@ -18,7 +18,7 @@
   align-items: center;
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md) var(--spacing-lg);
-  background-color: #1e2132;
+  border: 1px solid var(--line-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
 }
@@ -44,7 +44,7 @@
 }
 
 .edit-button {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--hover-color);
   border: none;
   color: white;
   padding: 10px 20px;

@@ -150,7 +150,7 @@ const ParticipantsList = ({ participants = [], currentUserId }) => {
                 </div>
               )}
               <span
-                className={`status-indicator ${
+                className={`participant-status-indicator ${
                   participant.isActive ? "online" : "offline"
                 }`}
               ></span>
@@ -168,7 +168,9 @@ const ParticipantsList = ({ participants = [], currentUserId }) => {
               </div>
 
               {participant.status && (
-                <div className="participant-status">{participant.status}</div>
+                <div className="participant-status-indicator">
+                  {participant.status}
+                </div>
               )}
             </div>
 

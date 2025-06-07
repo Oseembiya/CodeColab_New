@@ -76,7 +76,7 @@
 }
 
 .sidebar-nav ul li.active {
-  background-color: rgba(var(--secondary-rgb), 0.1);
+  background-color: var(--hover-color-secondary);
 }
 
 .sidebar-nav ul li a {
@@ -90,11 +90,11 @@
 }
 
 .sidebar-nav ul li.active a {
-  color: var(--secondary-color);
+  color: var(--text-color);
 }
 
 .sidebar-nav ul li:hover {
-  background-color: rgba(var(--secondary-rgb), 0.1);
+  background-color: var(--hover-color-secondary);
 }
 
 .sidebar-nav ul li a svg {
@@ -318,7 +318,7 @@
 }
 
 .logout-button:hover {
-  background-color: rgba(var(--secondary-rgb), 0.1);
+  background-color: var(--hover-color-secondary);
 }
 
 .logout-button svg {
