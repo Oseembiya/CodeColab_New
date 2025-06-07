@@ -53,13 +53,6 @@
   font-size: 1.1rem;
 }
 
-/* Main content styling (moved below intro section) */
-.dashboard-container > h2 {
-  font-size: var(--text-xl);
-  margin-bottom: var(--spacing-sm);
-  color: var(--secondary-color);
-}
-
 .dashboard-container .tagline {
   font-size: var(--text-lg);
   font-weight: 500;
@@ -104,6 +97,7 @@
   font-size: var(--text-lg);
   margin: var(--spacing-xl) 0 var(--spacing-md);
   padding-bottom: var(--spacing-xs);
+  color: var(--text-color);
 }
 
 /* Stats Container */
@@ -345,7 +339,7 @@
 
 .standalone-options h3 {
   margin-top: 0;
-  color: var(--secondary-color);
+  color: var(--text-color);
   font-size: var(--text-lg);
   margin-bottom: var(--spacing-xs);
 }
@@ -361,6 +355,7 @@
   display: flex;
   justify-content: center;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .standalone-button {
@@ -493,6 +488,10 @@ select {
 @media (max-width: 576px) {
   .dashboard-container > h2 {
     font-size: 1.5rem;
+  }
+
+  .dashboard-container {
+    padding: var(--spacing-md) var(--spacing-sm);
   }
 
   .section-title {

@@ -1,9 +1,9 @@
 :root {
   /* Colors - all used */
-  --background-color: #151618;
-  --text-color: #e4e6eb;
+  --background-color: #000000;
+  --text-color: #ffffff;
   --line-color: #42434a;
-  --hover-color:#241e29 ;
+  --hover-color: #241e29;
   --secondary-color: #849cff;
   --error-color: #dc2626;
   --success-color: #22c55e;
