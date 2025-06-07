@@ -11,9 +11,8 @@
 /* Introduction Section - Now at the top */
 .intro-section {
   margin-bottom: var(--spacing-xl);
-  background-color: #1e2132;
+  background-color: var(--background-color);
   border-radius: var(--radius-md);
-  padding: var(--spacing-lg) var(--spacing-xl);
   box-shadow: var(--shadow-lg);
   position: relative;
   overflow: hidden;
@@ -27,11 +26,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    120deg,
-    rgba(41, 44, 68, 0.5) 0%,
-    rgba(24, 26, 42, 0.8) 100%
-  );
+  background: var(--background-color);
   z-index: 1;
 }
 
@@ -71,25 +66,54 @@
 .get-started-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: linear-gradient(to right, #6366f1, #7e5bf9);
-  color: white;
-  border: none;
-  border-radius: 7px;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: 12px 16px;
+  background-color: var(--hover-color);
+  color: var(--text-color);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: var(--text-md);
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
   width: 100%;
-  max-width: 200px;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+  max-width: 250px;
+  position: relative;
+  /* Multi-layered glow effect */
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1),
+    0 0 20px rgba(255, 255, 255, 0.05), 0 0 40px rgba(255, 255, 255, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
-
 .get-started-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-  background: linear-gradient(to right, #5254cc, #6a4dd3);
+  border-color: var(--secondary-color);
+}
+
+.get-started-btn::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.1)
+  );
+  border-radius: 13px;
+  z-index: -1;
+  opacity: 0.6;
+}
+
+.get-started-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
 }
 
 /* Section Titles */
@@ -139,7 +163,8 @@
 .stat-icon {
   font-size: 2rem;
   margin-bottom: var(--spacing-sm);
-  color: var(--secondary-color);
+  color: var(--text-color);
+  opacity: 0.8;
 }
 
 .stat-item h3 {
@@ -175,7 +200,8 @@
 .use-case-icon {
   font-size: 2rem;
   margin-bottom: var(--spacing-md);
-  color: var(--secondary-color);
+  color: var(--text-color);
+  opacity: 0.8;
 }
 
 .feature-card h3,
@@ -212,7 +238,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--secondary-color);
+  background-color: var(--background-color);
   color: white;
   font-weight: bold;
   font-size: var(--text-lg);

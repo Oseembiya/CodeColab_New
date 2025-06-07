@@ -52,6 +52,7 @@
   padding: var(--spacing-xs);
   border-radius: var(--radius-sm);
   transition: background-color 0.2s;
+  font-size: 1.25rem;
 }
 
 .fold-toggle:hover {
