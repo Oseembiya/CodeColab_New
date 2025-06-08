@@ -56,14 +56,14 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line-color);
   animation: fadeIn 0.8s ease, slideUp 0.8s ease;
 }
 
 .auth-tabs {
   display: flex;
   width: 100%;
-  background: #2c2f3380;
+  background: var(--hover-color);
   padding: 2px;
 }
 
@@ -389,19 +389,20 @@
   display: block;
   width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
-  background: linear-gradient(
-    to right,
-    var(--secondary-color),
-    var(--secondary-light)
-  );
+  background: var(--hover-color);
   color: white;
-  border: none;
+  border: 1px solid var(--line-color);
   border-radius: var(--radius-sm);
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: 1px;
+}
+
+.auth-button:hover {
+  transform: translateY(-2px);
+  border-color: var(--secondary-color);
 }
 
 .auth-button:disabled {
