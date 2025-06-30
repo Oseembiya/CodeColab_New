@@ -62,7 +62,7 @@ const Demo = () => {
             </ul>
           </div>
           <Link to="/auth" className="signup-cta">
-            Start Collaborating - It's Free!
+            Start Collaborating Now!
           </Link>
         </div>
       </div>
