@@ -1,0 +1,252 @@
+.demo-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--background-color);
+  padding: var(--spacing-md);
+}
+
+.demo-container {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+}
+
+.demo-header {
+  margin-bottom: var(--spacing-xl);
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--text-color-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-md);
+  transition: color 0.2s ease;
+}
+
+.back-link:hover {
+  color: var(--secondary-color);
+}
+
+.demo-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: var(--spacing-sm);
+}
+
+.demo-header p {
+  color: var(--text-color-secondary);
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.demo-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.demo-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-xl);
+  background: var(--hover-color);
+  border: 1px solid var(--line-color);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.demo-option:hover {
+  background: rgba(92, 95, 187, 0.1);
+  border-color: var(--secondary-color);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.demo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(
+    135deg,
+    var(--secondary-color),
+    var(--secondary-light)
+  );
+  border-radius: var(--radius-lg);
+  color: #ffffff;
+  font-size: 2rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.demo-option h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: var(--spacing-sm);
+}
+
+.demo-option p {
+  color: var(--text-color-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.demo-footer {
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--line-color);
+}
+
+.upgrade-benefits {
+  margin-bottom: var(--spacing-lg);
+  text-align: left;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.upgrade-benefits h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.upgrade-benefits > p {
+  color: var(--text-color-secondary);
+  font-size: 1rem;
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.benefits-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  color: var(--text-color-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) 0;
+}
+
+.benefits-list li strong {
+  color: var(--secondary-color);
+}
+
+.cta-tagline {
+  text-align: center;
+  font-style: italic;
+  color: var(--text-color-secondary);
+  font-size: 0.9rem !important;
+  margin-top: var(--spacing-md) !important;
+  opacity: 0.8;
+}
+
+.demo-footer p {
+  color: var(--text-color-secondary);
+  font-size: 0.95rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.signup-cta {
+  display: inline-block;
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: linear-gradient(
+    135deg,
+    var(--secondary-color),
+    var(--secondary-light)
+  );
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 1.05rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(92, 95, 187, 0.2);
+}
+
+.signup-cta:hover {
+  background: linear-gradient(
+    135deg,
+    var(--secondary-light),
+    var(--secondary-color)
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(92, 95, 187, 0.3);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .demo-header h1 {
+    font-size: 2rem;
+  }
+
+  .demo-options {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .demo-option {
+    padding: var(--spacing-lg);
+  }
+
+  .demo-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+  }
+
+  .upgrade-benefits h3 {
+    font-size: 1.2rem;
+  }
+
+  .benefits-list li {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .demo-page {
+    padding: var(--spacing-sm);
+  }
+
+  .demo-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .demo-option {
+    padding: var(--spacing-md);
+  }
+
+  .upgrade-benefits {
+    text-align: center;
+  }
+
+  .benefits-list {
+    text-align: left;
+  }
+
+  .signup-cta {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: 1rem;
+  }
+}
