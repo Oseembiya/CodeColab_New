@@ -351,6 +351,14 @@ const Auth = () => {
             </div>
           </div>
         </div>
+
+        <div className="demo-section-separator">
+          <div className="demo-access">
+            <Link to="/demo" className="demo-access-button">
+              Try Demo (No Login Required)
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
