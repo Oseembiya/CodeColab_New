@@ -23,9 +23,16 @@ const StandaloneWhiteboard = () => {
   const canvasRef = useRef(null);
   const fabricCanvasRef = useRef(null);
 
-  const [activeTool, setActiveTool] = useState("pencil");
-  const [activeColor, setActiveColor] = useState("#5c5fbb");
-  const [brushWidth, setBrushWidth] = useState(3);
+  const [activeTool, setActiveTool] = useState(() => {
+    return localStorage.getItem("standaloneWhiteboardTool") || "pencil";
+  });
+  const [activeColor, setActiveColor] = useState(() => {
+    return localStorage.getItem("standaloneWhiteboardColor") || "#5c5fbb";
+  });
+  const [brushWidth, setBrushWidth] = useState(() => {
+    const savedWidth = localStorage.getItem("standaloneWhiteboardBrushWidth");
+    return savedWidth ? parseInt(savedWidth) : 3;
+  });
   const [isDrawing, setIsDrawing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -39,49 +46,36 @@ const StandaloneWhiteboard = () => {
     "#2196F3",
   ];
 
-  // Initialize canvas and fabric
-  useEffect(() => {
-    // Check if canvas already initialized
+  // Save canvas state to localStorage
+  const saveCanvasState = () => {
     if (fabricCanvasRef.current) {
-      return;
+      const canvasData = fabricCanvasRef.current.toJSON();
+      localStorage.setItem(
+        "standaloneWhiteboardCanvas",
+        JSON.stringify(canvasData)
+      );
     }
+  };
 
-    // Create fabric canvas
-    const canvas = new fabric.Canvas(canvasRef.current, {
-      isDrawingMode: true,
-      width: canvasRef.current.offsetWidth,
-      height: canvasRef.current.offsetHeight,
-      backgroundColor: "#000000",
-      selection: true,
-      allowTouchScrolling: true,
-    });
+  // Load canvas state from localStorage
+  const loadCanvasState = () => {
+    const savedCanvas = localStorage.getItem("standaloneWhiteboardCanvas");
+    if (savedCanvas && fabricCanvasRef.current) {
+      try {
+        const canvasData = JSON.parse(savedCanvas);
+        fabricCanvasRef.current.loadFromJSON(canvasData, () => {
+          fabricCanvasRef.current.renderAll();
+          // Re-apply current tool settings after loading
+          updateCanvasSettings();
+        });
+      } catch (error) {
+        console.error("Error loading canvas state:", error);
+      }
+    }
+  };
 
-    // Assign to ref
-    fabricCanvasRef.current = canvas;
-
-    // Set up drawing mode
-    canvas.freeDrawingBrush.color = activeColor;
-    canvas.freeDrawingBrush.width = brushWidth;
-
-    // Handle window resize
-    const handleResize = () => {
-      canvas.setWidth(canvasRef.current.offsetWidth);
-      canvas.setHeight(canvasRef.current.offsetHeight);
-      canvas.renderAll();
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    // Clean up
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      canvas.dispose();
-      fabricCanvasRef.current = null;
-    };
-  }, [activeColor, brushWidth]);
-
-  // Update canvas tool when active tool changes
-  useEffect(() => {
+  // Update canvas settings based on current tool
+  const updateCanvasSettings = () => {
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
@@ -110,39 +104,94 @@ const StandaloneWhiteboard = () => {
         break;
       case "text":
         canvas.isDrawingMode = false;
-        // Add text
-        const text = new fabric.IText("Click to edit text", {
-          left: canvas.width / 2,
-          top: canvas.height / 2,
-          fill: activeColor,
-          fontFamily: "Arial",
-          fontSize: 20,
-        });
-        canvas.add(text);
-        canvas.setActiveObject(text);
-        canvas.renderAll();
         break;
       default:
         canvas.isDrawingMode = true;
     }
+  };
+
+  // Initialize canvas and fabric
+  useEffect(() => {
+    // Check if canvas already initialized
+    if (fabricCanvasRef.current) {
+      return;
+    }
+
+    // Create fabric canvas
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      isDrawingMode: true,
+      width: canvasRef.current.offsetWidth,
+      height: canvasRef.current.offsetHeight,
+      backgroundColor: "#000000",
+      selection: true,
+      allowTouchScrolling: true,
+    });
+
+    // Assign to ref
+    fabricCanvasRef.current = canvas;
+
+    // Set up drawing mode
+    canvas.freeDrawingBrush.color = activeColor;
+    canvas.freeDrawingBrush.width = brushWidth;
+
+    // Add event listeners for saving canvas state
+    canvas.on("path:created", saveCanvasState);
+    canvas.on("object:added", saveCanvasState);
+    canvas.on("object:removed", saveCanvasState);
+    canvas.on("object:modified", saveCanvasState);
+
+    // Load saved canvas state
+    setTimeout(() => {
+      loadCanvasState();
+    }, 100);
+
+    // Handle window resize
+    const handleResize = () => {
+      canvas.setWidth(canvasRef.current.offsetWidth);
+      canvas.setHeight(canvasRef.current.offsetHeight);
+      canvas.renderAll();
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      canvas.dispose();
+      fabricCanvasRef.current = null;
+    };
+  }, []);
+
+  // Update canvas tool when active tool changes
+  useEffect(() => {
+    updateCanvasSettings();
   }, [activeTool, activeColor, brushWidth]);
 
   // Handle tool selection
   const handleToolSelect = (tool) => {
     setActiveTool(tool);
+    localStorage.setItem("standaloneWhiteboardTool", tool);
+
+    if (tool === "text") {
+      handleTextTool();
+    }
   };
 
   // Handle color selection
   const handleColorSelect = (color) => {
     setActiveColor(color);
+    localStorage.setItem("standaloneWhiteboardColor", color);
     if (activeTool === "eraser") {
       setActiveTool("pencil");
+      localStorage.setItem("standaloneWhiteboardTool", "pencil");
     }
   };
 
   // Handle brush size change
   const handleBrushSizeChange = (e) => {
-    setBrushWidth(parseInt(e.target.value));
+    const newWidth = parseInt(e.target.value);
+    setBrushWidth(newWidth);
+    localStorage.setItem("standaloneWhiteboardBrushWidth", newWidth.toString());
   };
 
   // Handle canvas clear
@@ -157,6 +206,8 @@ const StandaloneWhiteboard = () => {
       fabricCanvasRef.current.clear();
       fabricCanvasRef.current.setBackgroundColor("#000000", () => {
         fabricCanvasRef.current.renderAll();
+        // Clear saved canvas state
+        localStorage.removeItem("standaloneWhiteboardCanvas");
       });
       setShowConfirmModal(false);
     }
@@ -180,6 +231,25 @@ const StandaloneWhiteboard = () => {
       link.download = "standalone-whiteboard.png";
       link.click();
     }
+  };
+
+  // Handle text tool specifically
+  const handleTextTool = () => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    canvas.isDrawingMode = false;
+
+    const text = new fabric.IText("Click to edit text", {
+      left: canvas.width / 2,
+      top: canvas.height / 2,
+      fill: activeColor,
+      fontFamily: "Arial",
+      fontSize: 20,
+    });
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    canvas.renderAll();
   };
 
   // Rectangle drawing logic
