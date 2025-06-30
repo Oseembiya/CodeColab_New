@@ -198,10 +198,9 @@
 .feature-icon,
 .benefit-icon,
 .use-case-icon {
+  color: var(--secondary-color);
   font-size: 2rem;
   margin-bottom: var(--spacing-md);
-  color: var(--text-color);
-  opacity: 0.8;
 }
 
 .feature-card h3,
