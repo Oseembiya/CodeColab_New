@@ -628,8 +628,6 @@
 }
 
 .demo-access-button:hover {
-  background: var(--line-color);
-  color: var(--secondary-color);
   border-color: var(--secondary-color);
   transform: translateY(-1px);
 }
