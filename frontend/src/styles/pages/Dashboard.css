@@ -307,30 +307,36 @@
 
 .cta-button {
   background: linear-gradient(
-    45deg,
+    135deg,
     var(--secondary-color),
     var(--secondary-light)
   );
   color: white;
   border: none;
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--radius-md);
-  font-size: var(--text-base);
-  font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(92, 95, 187, 0.2);
   margin-bottom: var(--spacing-sm);
-  width: 280px;
+  width: 320px;
+  text-decoration: none;
 }
 
 .cta-button:hover {
+  background: linear-gradient(
+    135deg,
+    var(--secondary-light),
+    var(--secondary-color)
+  );
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 6px 20px rgba(92, 95, 187, 0.3);
 }
 
 .or-divider {
@@ -500,8 +506,8 @@ select {
 
   .cta-button {
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--text-base);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: 1rem;
   }
 
   .modal-content {
