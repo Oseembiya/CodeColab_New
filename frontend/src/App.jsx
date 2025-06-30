@@ -8,6 +8,7 @@ import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
 import Dashboard from "./pages/dashboard";
 import Auth from "./pages/auth";
+import Demo from "./pages/demo";
 import Profile from "./pages/profile";
 import Session from "./pages/session";
 import Whiteboard from "./pages/whiteboard";
@@ -30,10 +31,14 @@ const protectedRoutes = [
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/profile", element: <Profile /> },
   { path: "/sessions", element: <LiveSessions /> },
-  { path: "/standalone-editor", element: <StandaloneEditor /> },
-  { path: "/standalone-whiteboard", element: <StandaloneWhiteboard /> },
   { path: "/session/:sessionId", element: <Session /> },
   { path: "/whiteboard/:sessionId", element: <Whiteboard /> },
+];
+
+// Define public routes (no authentication required)
+const publicRoutes = [
+  { path: "/standalone-editor", element: <StandaloneEditor /> },
+  { path: "/standalone-whiteboard", element: <StandaloneWhiteboard /> },
 ];
 
 // Define legacy redirects
@@ -131,6 +136,11 @@ function App() {
                   />
                 ))}
 
+                {/* Public routes (no auth required) */}
+                {publicRoutes.map(({ path, element }) => (
+                  <Route key={path} path={path} element={element} />
+                ))}
+
                 {/* Legacy redirects */}
                 {legacyRedirects.map(({ from, to }) => (
                   <Route
@@ -139,6 +149,9 @@ function App() {
                     element={<Navigate to={to} replace />}
                   />
                 ))}
+
+                {/* Demo route */}
+                <Route path="/demo" element={<Demo />} />
               </Routes>
             </div>
           </SessionProvider>
