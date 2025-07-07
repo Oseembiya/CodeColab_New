@@ -27,8 +27,6 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const { currentUser } = useAuth();
@@ -119,7 +117,7 @@ const Profile = () => {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        setError("User profile not found");
+        toast.error("User profile not found");
         setIsLoading(false);
         return;
       }
@@ -174,7 +172,6 @@ const Profile = () => {
       });
     } catch (err) {
       console.error("Error fetching user profile:", err);
-      setError("Failed to load profile data");
       toast.error("Failed to load profile data");
     }
 
@@ -234,8 +231,6 @@ const Profile = () => {
   // Start editing profile
   const startEditing = () => {
     setIsEditing(true);
-    setError("");
-    setSuccess("");
     setHasChanges(false);
     setShowUnsavedWarning(false);
   };
@@ -259,30 +254,23 @@ const Profile = () => {
       newProfileImage: null,
     });
     setIsEditing(false);
-    setError("");
     setShowUnsavedWarning(false);
   };
 
   // Handle form validation
   const validateForm = () => {
     // Reset previous errors
-    setError("");
+    toast.error("");
 
     // Validate name (required)
     if (!formData.name.trim()) {
-      setError("Name cannot be empty");
+      toast.error("Name cannot be empty");
       return false;
     }
 
     // Validate name length
-    if (formData.name.trim().length > 50) {
-      setError("Name must be less than 50 characters");
-      return false;
-    }
-
-    // Validate bio length
-    if (formData.bio.length > 500) {
-      setError("Bio must be less than 500 characters");
+    if (formData.name.trim().length > 15) {
+      toast.error("Name must be less than 16 characters");
       return false;
     }
 
@@ -291,8 +279,7 @@ const Profile = () => {
 
   // Save profile changes
   const saveProfile = async () => {
-    setError("");
-    setSuccess("");
+    toast.error("");
 
     // Validate form
     if (!validateForm()) {
@@ -398,13 +385,8 @@ const Profile = () => {
       setIsEditing(false);
       setHasChanges(false);
       toast.success("Profile updated successfully!", { id: savingToast });
-      setSuccess("Profile updated successfully!");
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error updating profile:", err);
-      setError("Failed to update profile");
       toast.error("Failed to update profile", { id: savingToast });
     }
 
@@ -452,18 +434,6 @@ const Profile = () => {
           </div>
         )}
       </div>
-
-      {error && (
-        <div className="error-message" role="alert">
-          <FaExclamationTriangle /> {error}
-        </div>
-      )}
-      {success && (
-        <div className="success-message" role="status">
-          {success}
-        </div>
-      )}
-
       {/* Unsaved changes warning */}
       {showUnsavedWarning && (
         <div className="unsaved-warning">
@@ -565,11 +535,11 @@ const Profile = () => {
                   onChange={handleChange}
                   rows="5"
                   placeholder="Tell us about yourself"
-                  maxLength={500}
+                  maxLength={50}
                   aria-label="User bio"
                 />
                 <div className="bio-char-count">
-                  {formData.bio.length}/500 characters
+                  {formData.bio.length}/50 characters
                 </div>
               </>
             ) : (

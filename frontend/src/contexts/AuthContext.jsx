@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+      const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Listen for auth state changes
   useEffect(() => {
@@ -42,6 +44,8 @@ export const AuthProvider = ({ children }) => {
   const signup = async (email, password, displayName, photoFile, bio) => {
     try {
       setError("");
+      setSuccess("");
+      setIsLoading(true);
 
       // Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
@@ -90,9 +94,12 @@ export const AuthProvider = ({ children }) => {
         sessionHistory: [],
       });
 
+      setSuccess("Account created successfully! logging you in.");
+      setIsLoading(false);
       return user;
     } catch (err) {
       setError(err.message);
+      setIsLoading(false);
       throw err;
     }
   };
@@ -101,6 +108,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setError("");
+      setSuccess("");
+      setIsLoading(true);
 
       // First check if this email exists but with a different sign-in method
       try {
@@ -116,8 +125,6 @@ export const AuthProvider = ({ children }) => {
           const providerNames = {
             "google.com": "Google",
             "github.com": "GitHub",
-            "facebook.com": "Facebook",
-            "twitter.com": "Twitter",
           };
 
           const providers = methods
@@ -126,6 +133,7 @@ export const AuthProvider = ({ children }) => {
           setError(
             `This email is linked to ${providers}. Please use that sign-in method instead.`
           );
+          setIsLoading(false);
           return null;
         }
       } catch (methodErr) {
@@ -139,6 +147,8 @@ export const AuthProvider = ({ children }) => {
         email,
         password
       );
+      setSuccess("Login successful!");
+      setIsLoading(false);
       return userCredential.user;
     } catch (err) {
       console.error("Login error:", err.code, err.message);
@@ -148,9 +158,7 @@ export const AuthProvider = ({ children }) => {
         err.code === "auth/user-not-found" ||
         err.code === "auth/wrong-password"
       ) {
-        setError(
-          "Invalid email or password. Please check your credentials and try again."
-        );
+        setError("Invalid email or password.");
       } else if (err.code === "auth/too-many-requests") {
         setError(
           "Access temporarily disabled due to many failed login attempts. Please try again later or reset your password."
@@ -159,6 +167,7 @@ export const AuthProvider = ({ children }) => {
         setError(err.message || "Failed to sign in. Please try again.");
       }
 
+      setIsLoading(false);
       throw err;
     }
   };
@@ -167,11 +176,12 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = async () => {
     try {
       setError("");
+      setSuccess("");
+      setIsLoading(true);
+
       // Configure Google provider to request proper scopes if needed
       googleProvider.setCustomParameters({
         prompt: "select_account",
-        // Add additional scopes if needed
-        // access_type: 'offline' // for refresh token
       });
 
       const result = await signInWithPopup(auth, googleProvider);
@@ -202,7 +212,8 @@ export const AuthProvider = ({ children }) => {
         });
       }
 
-      console.log("Google authentication complete");
+      setSuccess("Login successful!");
+      setIsLoading(false);
       return result.user;
     } catch (err) {
       console.error("Google auth error:", err.code, err.message);
@@ -232,6 +243,7 @@ export const AuthProvider = ({ children }) => {
         setError(err.message || "Failed to sign in with Google");
       }
 
+      setIsLoading(false);
       throw err;
     }
   };
@@ -240,12 +252,12 @@ export const AuthProvider = ({ children }) => {
   const loginWithGithub = async () => {
     try {
       setError("");
+      setSuccess("");
+      setIsLoading(true);
 
       // Configure GitHub provider to request proper scopes
       githubProvider.setCustomParameters({
         prompt: "select_account",
-        // Request additional scopes if needed
-        // scope: 'user:email'
       });
 
       const result = await signInWithPopup(auth, githubProvider);
@@ -275,6 +287,8 @@ export const AuthProvider = ({ children }) => {
           sessionHistory: [],
         });
       }
+      setSuccess("Login successful!");
+      setIsLoading(false);
       return result.user;
     } catch (err) {
       console.error("GitHub auth error:", err.code, err.message);
@@ -296,6 +310,7 @@ export const AuthProvider = ({ children }) => {
         setError(err.message || "Failed to sign in with GitHub");
       }
 
+      setIsLoading(false);
       throw err;
     }
   };
@@ -319,6 +334,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     resetPassword,
     error,
+    success,
+    isLoading,
   };
 
   return (
