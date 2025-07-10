@@ -289,7 +289,7 @@ const StandaloneWhiteboard = () => {
       {/* Whiteboard Header */}
       <div className="whiteboard-header">
         <div className="header-left">
-          <h1>Standalone Whiteboard</h1>
+          <h1>Whiteboard</h1>
           <div className="connection-status">
             <span className="status-indicator standalone"></span>
             Standalone Mode

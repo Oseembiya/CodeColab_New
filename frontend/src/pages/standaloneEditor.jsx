@@ -351,7 +351,7 @@ const StandaloneEditor = () => {
       {/* Session Header */}
       <div className={`session-header ${isFullscreen ? "hidden" : ""}`}>
         <div className="header-left">
-          <h1>Standalone Editor</h1>
+          <h1>Code Editor</h1>
           <div className="connection-status">
             <span className="status-indicator standalone"></span>
             Standalone Mode
