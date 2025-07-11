@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       // Create initial user metrics document
-      await setDoc(doc(db, "userActivities", user.uid), {
+      await setDoc(doc(db, "User-Metrics-Activity", user.uid), {
         totalSessions: 0,
         linesOfCode: 0,
         hoursSpent: 0,
@@ -222,7 +222,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         // Create initial user metrics document
-        await setDoc(doc(db, "userActivities", result.user.uid), {
+        await setDoc(doc(db, "User-Metrics-Activity", result.user.uid), {
           totalSessions: 0,
           linesOfCode: 0,
           hoursSpent: 0,
@@ -298,7 +298,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         // Create initial user metrics document
-        await setDoc(doc(db, "userActivities", result.user.uid), {
+        await setDoc(doc(db, "User-Metrics-Activity", result.user.uid), {
           totalSessions: 0,
           linesOfCode: 0,
           hoursSpent: 0,
