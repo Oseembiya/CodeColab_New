@@ -105,13 +105,11 @@
 .sidebar-toggle {
   position: fixed;
   top: var(--spacing-md);
-  left: var(--spacing-md);
+  right: var(--spacing-md);
   background-color: var(--hover-color);
   color: var(--text-color);
   border: none;
   border-radius: var(--radius-md);
-  width: 40px;
-  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -214,8 +212,8 @@
   }
 
   .sidebar-toggle {
-    width: 44px;
-    height: 44px;
+    width: 45px;
+    height: 45px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
 
