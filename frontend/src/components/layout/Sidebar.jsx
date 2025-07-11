@@ -148,18 +148,6 @@ const Sidebar = ({ onFoldChange }) => {
                 <FaChalkboard /> {!isFolded && <span>Whiteboard</span>}
               </Link>
             </li>
-
-            {!currentUser && (
-              <li className={isActive("/auth") ? "active" : ""}>
-                <Link
-                  to="/auth"
-                  onClick={closeSidebar}
-                  title="Login / Register"
-                >
-                  <FaSignInAlt /> {!isFolded && <span>Login / Register</span>}
-                </Link>
-              </li>
-            )}
           </ul>
         </nav>
 
