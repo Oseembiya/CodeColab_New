@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FaUser,
@@ -23,10 +23,16 @@ const Auth = () => {
     signup,
     loginWithGoogle,
     loginWithGithub,
+    clearMessages, // Add this
     error,
     success,
     isLoading,
   } = useAuth();
+
+  // Clear messages when component mounts
+  useEffect(() => {
+    clearMessages();
+  }, []);
 
   // Login form state
   const [loginData, setLoginData] = useState({

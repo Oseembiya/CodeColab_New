@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-      const [success, setSuccess] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Listen for auth state changes
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Create new user with email/password
-  const signup = async (email, password, displayName, photoFile, bio) => {
+  const signup = async (displayName, email, password, photoFile, bio) => {
     try {
       setError("");
       setSuccess("");
@@ -98,7 +98,25 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false);
       return user;
     } catch (err) {
-      setError(err.message);
+      console.error("Signup error:", err.code, err.message);
+
+      // Handle specific signup errors
+      if (err.code === "auth/email-already-in-use") {
+        setError(
+          "An account with this email already exists. Please sign in instead or use a different email."
+        );
+      } else if (err.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else if (err.code === "auth/weak-password") {
+        setError("Password should be at least 6 characters long.");
+      } else if (err.code === "auth/operation-not-allowed") {
+        setError(
+          "Email/password accounts are not enabled. Please contact support."
+        );
+      } else {
+        setError(err.message || "Failed to create account. Please try again.");
+      }
+
       setIsLoading(false);
       throw err;
     }
@@ -316,13 +334,39 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Sign out
-  const logout = () => {
-    return signOut(auth);
+  const logout = async () => {
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+    try {
+      await signOut(auth);
+      setSuccess("Logged out successfully!");
+      setIsLoading(false);
+    } catch (err) {
+      setError(err.message || "Failed to log out. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   // Reset password
-  const resetPassword = (email) => {
-    return sendPasswordResetEmail(auth, email);
+  const resetPassword = async (email) => {
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setSuccess("Password reset email sent!");
+      setIsLoading(false);
+    } catch (err) {
+      setError(err.message || "Failed to reset password. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
+  // Clear messages function
+  const clearMessages = () => {
+    setError("");
+    setSuccess("");
   };
 
   const value = {
@@ -333,6 +377,7 @@ export const AuthProvider = ({ children }) => {
     loginWithGithub,
     logout,
     resetPassword,
+    clearMessages,
     error,
     success,
     isLoading,
