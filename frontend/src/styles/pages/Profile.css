@@ -551,7 +551,7 @@
 
 @media (max-width: 576px) {
   .profile-image {
-    width: 100%;
+    width: 50%;
     height: auto;
   }
 
