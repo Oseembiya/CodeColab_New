@@ -55,7 +55,7 @@ const Auth = () => {
 
   //  combine the handle for both login and register forms
   const handleFormChange = (setter) => (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, type, checked, value } = e.target;
     setter((prevData) => ({
       ...prevData,
       [name]: type === "checkbox" ? checked : value,
