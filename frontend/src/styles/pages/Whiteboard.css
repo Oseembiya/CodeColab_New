@@ -411,11 +411,11 @@
 
 /* Add styling for video chat */
 .video-chat-wrapper {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   right: 20px;
   width: 320px;
-  z-index: 1000;
+  z-index: 99999;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   overflow: hidden;
