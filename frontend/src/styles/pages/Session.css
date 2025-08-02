@@ -1293,11 +1293,11 @@ body.resizing .output-resize-handle {
 
 /* Video Chat Wrapper */
 .video-chat-wrapper {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   right: 20px;
   width: 320px;
-  z-index: 1000;
+  z-index: 99999;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   overflow: hidden;
@@ -1312,6 +1312,7 @@ body.resizing .output-resize-handle {
   position: fixed;
   border-radius: 0;
   resize: none;
+  z-index: 99999;
 }
 
 /* Media query for smaller screens */
