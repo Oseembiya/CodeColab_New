@@ -239,7 +239,7 @@ export const AuthProvider = ({ children }) => {
       // Handle specific Google errors
       if (err.code === "auth/account-exists-with-different-credential") {
         setError(
-          "An account already exists with the same email. Try signing in with a different method."
+          "This email is already linked to Google. Please sign in with Google."
         );
       } else if (err.code === "auth/popup-closed-by-user") {
         setError("Sign-in was cancelled. Please try again.");
@@ -247,9 +247,7 @@ export const AuthProvider = ({ children }) => {
         // This is normal when multiple popups are attempted, don't show error
         console.log("Popup request cancelled (normal when retrying)");
       } else if (err.code === "auth/popup-blocked") {
-        setError(
-          "Sign-in popup was blocked by your browser. Please enable popups for this site."
-        );
+        setError("Sign-in blocked. Please allow popups for this site.");
       } else if (err.code === "auth/unauthorized-domain") {
         setError(
           "This domain is not authorized for OAuth operations. Check Firebase console settings."
@@ -314,16 +312,14 @@ export const AuthProvider = ({ children }) => {
       // Handle specific GitHub errors
       if (err.code === "auth/account-exists-with-different-credential") {
         setError(
-          "An account already exists with the same email. Try signing in with a different method."
+          "This email is already linked to Google. Please sign in with Google."
         );
       } else if (err.code === "auth/popup-closed-by-user") {
         setError("Sign-in was cancelled. Please try again.");
       } else if (err.code === "auth/cancelled-popup-request") {
         // This is normal when multiple popups are attempted, don't show error
       } else if (err.code === "auth/popup-blocked") {
-        setError(
-          "Sign-in popup was blocked by your browser. Please enable popups for this site."
-        );
+        setError("Popup blocked. Please allow popups for this site.");
       } else {
         setError(err.message || "Failed to sign in with GitHub");
       }

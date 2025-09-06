@@ -3,12 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   FaUser,
   FaEnvelope,
-  FaLock,
   FaGoogle,
   FaGithub,
   FaTimes,
   FaCheck,
-  FaImage,
   FaEye,
   FaEyeSlash,
 } from "react-icons/fa";
