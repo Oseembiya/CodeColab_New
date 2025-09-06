@@ -103,7 +103,7 @@ export const AuthProvider = ({ children }) => {
       // Handle specific signup errors
       if (err.code === "auth/email-already-in-use") {
         setError(
-          "An account with this email already exists. Please sign in instead or use a different email."
+          "This email is already linked to Google. Please sign in with Google."
         );
       } else if (err.code === "auth/invalid-email") {
         setError("Please enter a valid email address.");
@@ -178,9 +178,7 @@ export const AuthProvider = ({ children }) => {
       ) {
         setError("Invalid email or password.");
       } else if (err.code === "auth/too-many-requests") {
-        setError(
-          "Access temporarily disabled due to many failed login attempts. Please try again later or reset your password."
-        );
+        setError("Too many failed logins. Try later or reset your password.");
       } else {
         setError(err.message || "Failed to sign in. Please try again.");
       }
