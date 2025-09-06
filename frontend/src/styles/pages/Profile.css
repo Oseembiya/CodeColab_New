@@ -551,8 +551,8 @@
 
 @media (max-width: 576px) {
   .profile-image {
-    width: 80px;
-    height: 80px;
+    width: 40%;
+    height: auto;
   }
 
   .profile-info h2 {
@@ -568,6 +568,6 @@
   }
 
   .metrics-grid {
-    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
   }
 }

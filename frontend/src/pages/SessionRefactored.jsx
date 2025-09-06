@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSession } from "../contexts/SessionContext";
 import { useSocket } from "../contexts/SocketContext";
@@ -18,7 +18,6 @@ import {
 } from "../components/Session";
 import "../styles/pages/Session.css";
 import { toast } from "react-hot-toast";
-import React from "react";
 import VideoChat, {
   isVideoChatActive,
   setVideoChatActive,
