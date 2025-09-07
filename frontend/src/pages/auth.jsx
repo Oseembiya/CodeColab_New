@@ -134,16 +134,7 @@ const Auth = () => {
               Create Account
             </button>
           </div>
-          {error && (
-            <div className="error-message">
-              {error}
-              {error.includes("Invalid email or password") && (
-                <div className="password-recovery-help">
-                  // Suggest password recovery if login fails
-                </div>
-              )}
-            </div>
-          )}
+          {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">{success}</div>}
           {activeTab === "login" ? (
             // Login Form
