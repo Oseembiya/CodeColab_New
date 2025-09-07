@@ -139,9 +139,7 @@ const Auth = () => {
               {error}
               {error.includes("Invalid email or password") && (
                 <div className="password-recovery-help">
-                  <Link to="/reset-password" className="forgot-password-link">
-                    Reset your password
-                  </Link>
+                  // Suggest password recovery if login fails
                 </div>
               )}
             </div>
