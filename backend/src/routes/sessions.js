@@ -44,6 +44,12 @@ router.post("/", authenticateUser, async (req, res) => {
         sessionCode = generateSessionCode();
       }
     }
+    // lookup creators's display name
+    const creatorDoc = await db.collection("users").doc(req.user.uid).get();
+    const createdByName =
+      creatorDoc.exists &&
+      (creatorDoc.data().displayName || creatorDoc.data().name);
+    req.user.name || req.user.email || "Unknown User";
 
     const session = {
       title,
@@ -51,6 +57,7 @@ router.post("/", authenticateUser, async (req, res) => {
       description: description || "",
       code: "",
       createdBy: req.user.uid,
+      createdByName,
       createdAt: new Date(),
       participants: [req.user.uid],
       isActive: true,
@@ -95,6 +102,7 @@ router.get("/public", async (req, res) => {
         description: data.description,
         language: data.language,
         createdAt: data.createdAt.toDate(),
+        createdByName: data.createdByName || null,
         participants: data.participants.length,
         isPublic: data.isPublic,
         status: data.isActive ? "active" : "ended",
@@ -213,6 +221,7 @@ router.get("/:id", authenticateUser, async (req, res) => {
       data: {
         id: sessionDoc.id,
         ...sessionData,
+        createdByName: sessionData.createdByName || null,
       },
     });
   } catch (error) {
