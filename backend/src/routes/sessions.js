@@ -49,7 +49,7 @@ router.post("/", authenticateUser, async (req, res) => {
       language: language || "javascript",
       description: description || "",
       code: "",
-      createdBy: req.user.name,
+      createdBy: req.user.uid,
       createdAt: new Date(),
       participants: [req.user.uid],
       isActive: true,
