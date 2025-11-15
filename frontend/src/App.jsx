@@ -48,19 +48,9 @@ const legacyRedirects = [
 ];
 
 function App() {
-  const [loading, setLoading] = useState(true);
   const [isSidebarFolded, setIsSidebarFolded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { currentUser } = useAuth();
-
-  useEffect(() => {
-    // Remove loading state after a short delay
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Function to update sidebar folded state
   const handleSidebarFold = (folded) => {
@@ -71,15 +61,6 @@ function App() {
   const handleSidebarOpen = (open) => {
     setIsSidebarOpen(open);
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading CodeColab...</p>
-      </div>
-    );
-  }
 
   return (
     <div
