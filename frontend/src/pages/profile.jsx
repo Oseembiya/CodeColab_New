@@ -24,7 +24,6 @@ import axios from "axios";
 import "../styles/pages/Profile.css";
 
 const Profile = () => {
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -109,8 +108,6 @@ const Profile = () => {
 
   // Fetch real user data from Firestore
   const fetchUserProfile = async () => {
-    setIsLoading(true);
-
     try {
       // Get the user document from Firestore
       const userDocRef = doc(db, "users", currentUser.uid);
@@ -118,7 +115,6 @@ const Profile = () => {
 
       if (!userDoc.exists()) {
         toast.error("User profile not found");
-        setIsLoading(false);
         return;
       }
 
@@ -174,8 +170,6 @@ const Profile = () => {
       console.error("Error fetching user profile:", err);
       toast.error("Failed to load profile data");
     }
-
-    setIsLoading(false);
   };
 
   // Handle form input changes
@@ -392,15 +386,6 @@ const Profile = () => {
 
     setIsSaving(false);
   };
-
-  if (isLoading && !profile.name) {
-    return (
-      <div className="profile-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading profile...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="profile-container">
