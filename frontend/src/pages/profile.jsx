@@ -65,9 +65,23 @@ const Profile = () => {
     profileImage: "",
   });
 
-  // Fetch user profile on load
+  // Initialize profile with currentUser data immediately (for faster display)
   useEffect(() => {
     if (currentUser) {
+      // Set initial profile image from currentUser immediately for instant display
+      setProfile((prev) => ({
+        ...prev,
+        name: currentUser.displayName || "User",
+        email: currentUser.email || "",
+        profileImage: currentUser.photoURL || "",
+      }));
+      
+      // Preload the profile image
+      if (currentUser.photoURL) {
+        const img = new Image();
+        img.src = currentUser.photoURL;
+      }
+      
       fetchUserProfile();
       fetchUserMetrics();
     }
@@ -456,6 +470,7 @@ const Profile = () => {
                   <img
                     src={formData.profileImage || "/default-avatar.png"}
                     alt="Profile"
+                    loading="eager"
                   />
                   <label
                     htmlFor="profile-image-upload"
@@ -479,6 +494,7 @@ const Profile = () => {
                 <img
                   src={profile.profileImage || "/default-avatar.png"}
                   alt="Profile"
+                  loading="eager"
                 />
               </div>
             )}
