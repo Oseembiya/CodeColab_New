@@ -187,7 +187,7 @@ const JoinPrivateSessionModal = ({ onClose, onJoin }) => {
 const CreateSessionModal = ({ onClose, onSubmit }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [language, setLanguage] = useState("javascript");
+  const [language, setLanguage] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [sessionCreated, setSessionCreated] = useState(false);
   const [sessionCode, setSessionCode] = useState("");
@@ -246,7 +246,7 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
                 >
-                  <option value="javascript">JavaScript</option>
+                  <option value="">JavaScript</option>
                   <option value="python">Python</option>
                   <option value="java">Java</option>
                   <option value="csharp">C#</option>
@@ -337,7 +337,6 @@ const LiveSessions = () => {
   // State for combined sessions and filters
   const [allFilteredSessions, setAllFilteredSessions] = useState([]);
   const [filteredSessions, setFilteredSessions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -353,8 +352,6 @@ const LiveSessions = () => {
 
   // Combine user sessions and all sessions, removing duplicates
   useEffect(() => {
-    setIsLoading(userSessionsLoading || allSessionsLoading);
-
     if (!userSessionsLoading && !allSessionsLoading) {
       // Create a map of sessions by ID to remove duplicates
       const sessionsMap = new Map();
@@ -507,8 +504,6 @@ const LiveSessions = () => {
 
   // Handle refresh button click
   const handleRefresh = () => {
-    setIsLoading(true);
-
     // Refresh both user sessions and all sessions
     refreshSessions();
     refreshAllSessions();
@@ -633,8 +628,6 @@ const LiveSessions = () => {
       if (!response.ok) {
         if (response.status === 404) {
           alert("Invalid session code. Please check and try again.");
-        } else {
-          alert("Error resolving session code. Please try again.");
         }
         return null;
       }
@@ -643,9 +636,7 @@ const LiveSessions = () => {
       return data.status === "success" ? data.data.sessionId : null;
     } catch (error) {
       console.error("Error resolving session code:", error);
-      alert(
-        "Connection error. Please check your internet connection and try again."
-      );
+      alert("Connection error. Please try again.");
       return null;
     }
   };
@@ -670,9 +661,9 @@ const LiveSessions = () => {
           <button
             className="refresh-button"
             onClick={handleRefresh}
-            disabled={isLoading}
+            disabled={userSessionsLoading || allSessionsLoading}
           >
-            <FaSync className={isLoading ? "rotating" : ""} /> Refresh
+            <FaSync className={userSessionsLoading || allSessionsLoading ? "rotating" : ""} /> Refresh
           </button>
         </div>
         <div className="action-buttons">
@@ -754,12 +745,7 @@ const LiveSessions = () => {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Loading sessions...</p>
-        </div>
-      ) : filteredSessions.length === 0 ? (
+      {filteredSessions.length === 0 ? (
         <div className="no-sessions">
           <p>No sessions found matching your filters.</p>
           <button
