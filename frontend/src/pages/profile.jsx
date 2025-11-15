@@ -82,14 +82,18 @@ const Profile = () => {
         }
       }
       
+      // Try to get cached bio from localStorage for instant display
+      const cachedBio = localStorage.getItem(`profile_bio_${currentUser.uid}`);
+      const cachedJoinDate = localStorage.getItem(`profile_joinDate_${currentUser.uid}`);
+      
       // Set initial profile data from currentUser immediately for instant display
       setProfile((prev) => ({
         ...prev,
         name: currentUser.displayName || "User",
         email: currentUser.email || "",
         profileImage: currentUser.photoURL || "",
-        bio: "", // Will be updated from Firestore if available
-        joinDate: initialJoinDate, // Will be updated from Firestore if available
+        bio: cachedBio || "", // Use cached bio if available
+        joinDate: cachedJoinDate || initialJoinDate, // Use cached join date if available
       }));
       
       // Preload the profile image
@@ -139,9 +143,14 @@ const Profile = () => {
   // Fetch real user data from Firestore
   const fetchUserProfile = async () => {
     try {
-      // Get the user document from Firestore
+      // Get both documents in parallel for faster loading
       const userDocRef = doc(db, "users", currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      const activityDocRef = doc(db, "userActivities", currentUser.uid);
+      
+      const [userDoc, activityDoc] = await Promise.all([
+        getDoc(userDocRef),
+        getDoc(activityDocRef)
+      ]);
 
       if (!userDoc.exists()) {
         toast.error("User profile not found");
@@ -149,10 +158,6 @@ const Profile = () => {
       }
 
       const userData = userDoc.data();
-
-      // Get user activity data
-      const activityDocRef = doc(db, "userActivities", currentUser.uid);
-      const activityDoc = await getDoc(activityDocRef);
       const activityData = activityDoc.exists() ? activityDoc.data() : {};
 
       // Format join date
@@ -167,10 +172,20 @@ const Profile = () => {
       // Create session data from activity history if available
       const sessions = activityData.sessionHistory || [];
 
+      const bio = userData.bio || "";
+      
+      // Cache bio and join date in localStorage for instant display on next visit
+      if (bio) {
+        localStorage.setItem(`profile_bio_${currentUser.uid}`, bio);
+      }
+      if (joinDate && joinDate !== "N/A") {
+        localStorage.setItem(`profile_joinDate_${currentUser.uid}`, joinDate);
+      }
+
       setProfile({
         name: userData.displayName || currentUser.displayName || "User",
         email: userData.email || currentUser.email,
-        bio: userData.bio || "",
+        bio,
         profileImage: userData.photoURL || currentUser.photoURL || "",
         joinDate,
         projects: [], // Would fetch from projects collection in a real app
@@ -398,6 +413,11 @@ const Profile = () => {
         bio: formData.bio,
         profileImage: photoURL,
       }));
+
+      // Update cache in localStorage
+      if (formData.bio) {
+        localStorage.setItem(`profile_bio_${currentUser.uid}`, formData.bio);
+      }
 
       // Update original form data
       setOriginalFormData({
