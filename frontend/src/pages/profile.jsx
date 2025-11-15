@@ -68,12 +68,28 @@ const Profile = () => {
   // Initialize profile with currentUser data immediately (for faster display)
   useEffect(() => {
     if (currentUser) {
-      // Set initial profile image from currentUser immediately for instant display
+      // Format join date from user metadata if available
+      let initialJoinDate = "N/A";
+      if (currentUser.metadata && currentUser.metadata.creationTime) {
+        try {
+          initialJoinDate = new Date(currentUser.metadata.creationTime).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        } catch (e) {
+          // If date parsing fails, keep "N/A"
+        }
+      }
+      
+      // Set initial profile data from currentUser immediately for instant display
       setProfile((prev) => ({
         ...prev,
         name: currentUser.displayName || "User",
         email: currentUser.email || "",
         profileImage: currentUser.photoURL || "",
+        bio: "", // Will be updated from Firestore if available
+        joinDate: initialJoinDate, // Will be updated from Firestore if available
       }));
       
       // Preload the profile image
