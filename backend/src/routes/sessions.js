@@ -3,6 +3,8 @@ const router = express.Router();
 const { db } = require("../config/firebase");
 const { authenticateUser } = require("../middleware/auth");
 
+const crypto = require("crypto");
+
 // Collection reference
 const sessionsCollection = db.collection("sessions");
 
@@ -19,16 +21,13 @@ router.post("/", authenticateUser, async (req, res) => {
     }
 
     // Generate a unique 6-character session code
-    const generateSessionCode = () => {
-      const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed similar looking characters
-      let code = "";
-      for (let i = 0; i < 6; i++) {
-        code += characters.charAt(
-          Math.floor(Math.random() * characters.length)
-        );
-      }
-      return code;
-    };
+    function generateSessionCode() {
+      const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const code = crypto.randomBytes(6); // 6 random code
+      return Array.from(code, (b) => characters[b % characters.length]).join(
+        ""
+      );
+    }
 
     // Make sure the code is unique
     let sessionCode = generateSessionCode();
@@ -46,7 +45,7 @@ router.post("/", authenticateUser, async (req, res) => {
     }
     const session = {
       title,
-      language: language || "javascript",
+      language: language || "",
       description: description || "",
       code: "",
       createdBy: req.user.uid,
