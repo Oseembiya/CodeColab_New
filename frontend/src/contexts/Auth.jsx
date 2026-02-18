@@ -202,7 +202,7 @@ export const AuthProvider = ({ children }) => {
 
       const result = await signInWithPopup(auth, googleProvider);
       const token = await result.user.getIdToken(true);
-      console.log("🔥 ID TOKEN:", token);
+      console.log("🔥 ID TOKENs:", token);
       // Check if this is a new user
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
 
