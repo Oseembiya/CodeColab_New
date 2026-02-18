@@ -195,43 +195,44 @@ export const AuthProvider = ({ children }) => {
       setSuccess("");
       setIsLoading(true);
 
-      // Configure Google provider to request proper scopes if needed
-      googleProvider.setCustomParameters({
-        prompt: "select_account",
-      });
+      // Start Google login via redirect
+      await signInWithRedirect(auth, googleProvider);
 
-      const result = await signInWithPopup(auth, googleProvider);
-      const token = await result.user.getIdToken(true);
-      console.log("🔥 ID TOKENs:", token);
-      // Check if this is a new user
-      const userDoc = await getDoc(doc(db, "users", result.user.uid));
+      // After redirect back to the app, get the login result
+      const result = await getRedirectResult(auth);
 
-      if (!userDoc.exists()) {
-        // Create user document in Fire store for new users
-        await setDoc(doc(db, "users", result.user.uid), {
-          displayName:
-            result.user.displayName || result.user.email.split("@")[0],
-          email: result.user.email,
-          photoURL: result.user.photoURL,
-          bio: "",
-          joinDate: serverTimestamp(),
-          settings: {
-            theme: "dark",
-          },
-        });
+      if (result) {
+        const user = result.user;
 
-        // Create initial user metrics document
-        await setDoc(doc(db, "User-Metrics-Activity", result.user.uid), {
-          totalSessions: 0,
-          linesOfCode: 0,
-          hoursSpent: 0,
-          sessionHistory: [],
-        });
+        // Get a fresh ID token
+        const token = await user.getIdToken(true);
+        console.log("🔥 ID TOKEN:", token);
+
+        // Check if user exists in Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (!userDoc.exists()) {
+          await setDoc(doc(db, "users", user.uid), {
+            displayName: user.displayName || user.email.split("@")[0],
+            email: user.email,
+            photoURL: user.photoURL,
+            bio: "",
+            joinDate: serverTimestamp(),
+            settings: { theme: "dark" },
+          });
+
+          // Initialize user metrics
+          await setDoc(doc(db, "User-Metrics-Activity", user.uid), {
+            totalSessions: 0,
+            linesOfCode: 0,
+            hoursSpent: 0,
+            sessionHistory: [],
+          });
+        }
+
+        setSuccess("Login successful!");
+        setIsLoading(false);
+        return user;
       }
-
-      setSuccess("Login successful!");
-      setIsLoading(false);
-      return result.user;
     } catch (err) {
       console.error("Google auth error:", err.code, err.message);
 
@@ -242,17 +243,12 @@ export const AuthProvider = ({ children }) => {
         );
       } else if (err.code === "auth/popup-closed-by-user") {
         setError("Sign-in was cancelled. Please try again.");
-      } else if (err.code === "auth/cancelled-popup-request") {
-        // This is normal when multiple popups are attempted, don't show error
-        console.log("Popup request cancelled (normal when retrying)");
-      } else if (err.code === "auth/popup-blocked") {
-        setError("Sign-in blocked. Please allow popups for this site.");
       } else if (err.code === "auth/unauthorized-domain") {
         setError(
           "This domain is not authorized for OAuth operations. Check Firebase console settings.",
         );
         console.error(
-          "Domain not authorized. Add this domain to the Firebase console under Authentication > Settings > Authorized domains",
+          "Add this domain to Firebase console under Authentication > Settings > Authorized domains",
         );
       } else {
         setError(err.message || "Failed to sign in with Google");
@@ -262,7 +258,6 @@ export const AuthProvider = ({ children }) => {
       throw err;
     }
   };
-
   // Sign in with GitHub
   const loginWithGithub = async () => {
     try {
