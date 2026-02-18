@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const { db, auth } = require("../config/firebase");
-const { authenticateUser } = require("../middleware/auth");
+// const { authenticateUser } = require("../middleware/auth");
 
 // Collection reference
 const usersCollection = db.collection("users");
 
 // Get current user profile
-router.get("/me", authenticateUser, async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
     const userDoc = await usersCollection.doc(req.user.uid).get();
 
@@ -35,7 +35,7 @@ router.get("/me", authenticateUser, async (req, res) => {
 });
 
 // Create or update user profile
-router.post("/profile", authenticateUser, async (req, res) => {
+router.post("/profile", async (req, res) => {
   try {
     const { displayName, photoURL } = req.body;
     const userRef = usersCollection.doc(req.user.uid);
@@ -74,7 +74,7 @@ router.post("/profile", authenticateUser, async (req, res) => {
 });
 
 // Get user by ID (for collaborators)
-router.get("/:id", authenticateUser, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const userDoc = await usersCollection.doc(req.params.id).get();
 
@@ -107,7 +107,7 @@ router.get("/:id", authenticateUser, async (req, res) => {
 });
 
 // Search users by email (for adding collaborators)
-router.get("/search/email", authenticateUser, async (req, res) => {
+router.get("/search/email", async (req, res) => {
   try {
     const { email } = req.query;
 
