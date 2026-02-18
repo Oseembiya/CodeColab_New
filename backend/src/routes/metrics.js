@@ -41,7 +41,7 @@ router.get("/", async (req, res) => {
 });
 
 // Update user metrics
-router.put("/" async (req, res) => {
+router.put("/", async (req, res) => {
   try {
     const { metricsUpdate } = req.body;
     const userRef = db.collection("users").doc(req.user.uid);
