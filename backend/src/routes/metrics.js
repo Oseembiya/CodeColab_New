@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { db } = require("../config/firebase");
-const { authenticateUser } = require("../middleware/auth");
+//const {  } = require("../middleware/auth");
 
 // Get user metrics
-router.get("/", authenticateUser, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const userRef = db.collection("users").doc(req.user.uid);
     const userDoc = await userRef.get();
@@ -41,7 +41,7 @@ router.get("/", authenticateUser, async (req, res) => {
 });
 
 // Update user metrics
-router.put("/", authenticateUser, async (req, res) => {
+router.put("/", async (req, res) => {
   try {
     const { metricsUpdate } = req.body;
     const userRef = db.collection("users").doc(req.user.uid);
@@ -88,7 +88,7 @@ router.put("/", authenticateUser, async (req, res) => {
 });
 
 // Increment specific metric fields
-router.post("/increment", authenticateUser, async (req, res) => {
+router.post("/increment",async (req, res) => {
   try {
     const { increments } = req.body;
     const userRef = db.collection("users").doc(req.user.uid);
