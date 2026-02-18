@@ -5,10 +5,10 @@ const socketIO = require("socket.io");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
+const { authenticateUser } = require("./middleware/auth");
 
 // Load environment variables
 dotenv.config();
-
 
 // Import route modules
 const usersRoutes = require("./routes/users");
@@ -19,7 +19,7 @@ const metricsRoutes = require("./routes/metrics");
 // Import socket handlers
 const { setupSocketHandlers } = require("./socket/handlers");
 
-// Initialize Express app
+// Initialize Express application
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -56,7 +56,7 @@ const io = socketIO(server, {
 setupSocketHandlers(io);
 
 // API routes
-app.get("/", (req, res) => {
+app.get("/Api", (req, res) => {
   res.status(200).json({
     status: "success",
     message: "CodeColab API is running",
@@ -64,7 +64,7 @@ app.get("/", (req, res) => {
 });
 
 // Debug route to check if server is receiving requests
-app.get("/api/debug", (req, res) => {
+app.get("/api/debug", authenticateUser, (req, res) => {
   res.json({
     message: "Debug endpoint reached successfully",
     env: {
@@ -92,7 +92,6 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error("Error:", err);
